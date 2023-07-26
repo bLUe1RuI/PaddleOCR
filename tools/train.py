@@ -62,7 +62,7 @@ def main(config, device, logger, vdl_writer):
     if config['Eval']:
         valid_dataloader = build_dataloader(config, 'Eval', device, logger)
     else:
-        valid_dataloader = None
+        valid_dataloader = [] #None
 
     # build post process
     post_process_class = build_post_process(config['PostProcess'],

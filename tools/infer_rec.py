@@ -180,6 +180,13 @@ def main():
             if info is not None:
                 logger.info("\t result: {}".format(info))
                 fout.write(file + "\t" + info + "\n")
+            tmp_save_dir = os.path.join(os.path.dirname(global_config['save_res_path']), 'rec_results')
+            basename = os.path.basename(file)
+            if not os.path.exists(tmp_save_dir):
+                os.makedirs(tmp_save_dir)
+            import shutil
+            _info = info.replace(' ', '__').replace('\t', '--score')
+            shutil.copyfile(file, os.path.join(tmp_save_dir, f'{_info}_{basename}'))
     logger.info("success!")
 
 
