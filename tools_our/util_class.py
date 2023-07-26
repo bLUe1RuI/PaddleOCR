@@ -269,19 +269,127 @@ class AxisDetect:
             secondcircles = sorted(secondcircles, key=lambda x: -x[2])[:4]
         return bigcircle, secondcircles
     
+    def infer_circle_nie(self, tgt_image):
+        """Finds the four black circles in the image and returns their center points."""
+
+        # Convert the image to grayscale.
+        grayscale_image = cv2.cvtColor(tgt_image, cv2.COLOR_BGR2GRAY)
+
+        # Use the Hough Circles algorithm to detect circles in the image.
+        # r=128, R=668, c=441, width=90, half_width=45, r_eye=35
+
+        center_points = self.find_black_circles(tgt_image)
+        center_points_post = []
+        for center_point in center_points:
+            center_points_post.append(((center_point[0], center_point[1]), center_point[2], 5))
+        
+        center_point_big = self.find_white_circles(tgt_image)
+        center_point_big_post = []
+        for center_point in center_point_big:
+            center_point_big_post.append(((center_point[0], center_point[1]), center_point[2], 5))
+
+        return center_point_big_post[0], center_points_post
+
+    def find_white_circles(self, image, minDist=700, acc_thresh=50):
+    
+        """Finds the big white circle in the image and returns their center points."""
+
+        # Convert the image to grayscale.
+        grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # Use the Hough Circles algorithm to detect circles in the image.
+        # r=128, R=668, c=441, width=90, half_width=45, r_eye=35
+
+        circles = cv2.HoughCircles(grayscale_image, cv2.HOUGH_GRADIENT, 1, minDist, param1=100, param2=acc_thresh, minRadius=600, maxRadius=700) # too many circles detected
+    
+        center_points = self.filter_by_ranking(circles, grayscale_image, filter_thresh=0, half_side_length=460, descending=True, tgt_sz=1)
+        return center_points
+
+
+    def find_black_circles(self, image, minDist=200, acc_thresh=50):
+        """Finds the four black circles in the image and returns their center points."""
+
+        # Convert the image to grayscale.
+        grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        circles = cv2.HoughCircles(grayscale_image, cv2.HOUGH_GRADIENT, 1, minDist, param1=100, param2=acc_thresh, minRadius=100, maxRadius=150) # too many circles detected
+
+        center_points = self.filter_by_ranking(circles, grayscale_image, filter_thresh=120, half_side_length=45, descending=False, tgt_sz=4)
+
+        return center_points
+
+    def get_mean_val(self, cp_mean):
+        return cp_mean[1]
+
+    def filter_by_ranking(self, circles, grayscale_image, filter_thresh=120, half_side_length=45, descending=False, tgt_sz=4):
+        center_points = []
+        h, w = grayscale_image.shape
+        # import pdb; pdb.set_trace()
+        cp_mean_pair = []
+        for circle in circles[0, :]:
+            x, y, radius = circle
+            x, y = int(round(x)), int(round(y))
+            x1, y1 = x-half_side_length, y-half_side_length
+            x2, y2 = x+half_side_length, y+half_side_length
+            x1, y1 = x1 if x1>0 else 0, y1 if y1>0 else 0
+            x2, y2 = x2 if x2<w else w-1, y2 if y2<h else y2-1
+            circle_patch = grayscale_image[y1:y2, x1:x2]
+            vec = np.ravel(circle_patch)
+            self.trim_vec(vec, low_thresh=5, high_thresh=95)
+            mean_val = np.mean(circle_patch)
+            if not descending and mean_val>filter_thresh:
+                continue
+            elif descending and mean_val<filter_thresh:
+                continue
+            # print(x, y, radius)
+            cp_mean_pair.append(((x,y,radius), mean_val))
+
+        cp_mean_pair.sort(key=self.get_mean_val, reverse=descending)
+        sz = len(cp_mean_pair)
+        sz = sz if sz<tgt_sz else tgt_sz
+        for i in range(0, sz):
+            center_points.append(cp_mean_pair[i][0])
+
+        return center_points
+
+
+    def trim_vec(self, vector, low_thresh=5, high_thresh=95):
+
+        # # Sample vector
+        # vector = np.array([10, 5, 15, 20, 25, 30, 35, 40, 45, 50])
+
+        # Calculate the 5th and 95th percentiles
+        percentile_5 = np.percentile(vector, low_thresh)
+        percentile_95 = np.percentile(vector, high_thresh)
+
+        # Select the values within the 5th and 95th percentiles
+        trimmed_vector = vector[(vector >= percentile_5) & (vector <= percentile_95)]
+
+        return trimmed_vector
+    
     def infer_axis(self, bigcircle, secondcircles):
         return CircleAixs(bigcircle, secondcircles)
     
     def infer(self, image):
         # preprocess
         height, width, _ = image.shape
-        tgt_width = 512
+        # use circle detect by nie
+        tgt_width = 3072
         tgt_height = int(tgt_width / width * height)
-        tgt_image = cv2.resize(image, (tgt_width, tgt_height))
+        tgt_image = cv2.resize(image, (tgt_width, tgt_height)) # usually, we donot need to resize because 3072 is the original size
         # detect circle
-        bigcircle, secondcircles = self.infer_circle(tgt_image)
-        if bigcircle is None:
-            return None, "warning: 未检测到关键轴，请转动适当角度"
+        bigcircle, secondcircles = self.infer_circle_nie(tgt_image)
+        
+        if len(bigcircle) == 0 or len(secondcircles) == 0:
+            print("warning: the nie method failed, try method two")
+            tgt_width = 512
+            tgt_height = int(tgt_width / width * height)
+            tgt_image = cv2.resize(image, (tgt_width, tgt_height))
+            # detect circle
+            bigcircle, secondcircles = self.infer_circle(tgt_image)
+            if bigcircle is None:
+                return None, "warning: 未检测到关键轴，请转动适当角度"
+            
         circleaxis = self.infer_axis(bigcircle, secondcircles)
         if len(circleaxis.axis_angle) == 0:
             return None, "warning: 未检测到关键轴，请转动适当角度"

@@ -77,7 +77,7 @@ def main():
     imlist = list(filter(lambda x: x[-4:] == '.png', imlist))
     
     axisDetect = AxisDetect()
-    for idx, imname in enumerate(imlist[17:]):
+    for idx, imname in enumerate(imlist[:2]):
         imgname = osp.join(imroot, imname)
         image = cv2.imread(imgname)
         
