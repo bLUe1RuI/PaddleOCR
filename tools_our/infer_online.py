@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import shutil
 
 from util_class import AxisDetect
-from ocr_api import run_first_det_api, post_process_first_det_api, ocr_det_api, ocr_rec_api
+from ocr_api_infermodel import run_first_det_api, post_process_first_det_api, ocr_det_api, ocr_rec_api, post_process
 
 def rotate_img_func(img, angle):
     '''
@@ -67,7 +67,7 @@ def draw_word(image, _transcriptions_str, saveroot):
     
 
 def main():
-    imroot = '/home/rlan/data/2023_06_data/2023_06_organize_data/2023_06_12'
+    imroot = '../../../2023_06_organize_data/2023_06_12'
     #imroot = '2023_06_organize_data/2023_06_13'
     saveroot = 'output/test_debug/'
     if not osp.exists(saveroot):
@@ -82,7 +82,7 @@ def main():
         image = cv2.imread(imgname)
         
         # first step detect axis
-        circleaxis, log_info = axisDetect.infer(image)
+        circleaxis, log_info = axisDetect.infer(imgname)
         print(log_info)
         if circleaxis is None or len(circleaxis.axis_angle) == 0:
             print(f"{idx}-step first step axis failed: {imgname}")
@@ -121,6 +121,7 @@ def main():
         shutil.copyfile(core_sector.first_det_file, osp.join(saveroot, 'first_det_result.png'))
         # infer ocr rec
         _transcriptions_str = ocr_rec_api(core_sector.ocr_boxes, saveroot)
+        _transcriptions_str = post_process(core_sector.ocr_boxes)[1]
         core_sector._transcriptions_str = _transcriptions_str
         
         final_image = draw_word(image, _transcriptions_str, saveroot)

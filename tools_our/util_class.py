@@ -3,9 +3,11 @@ import numpy as np
 import math
 from shapely import Polygon
 
+from circle_detect_api import circle_detect_api
+
 class Sector:
     def __init__(self, points, angle):
-        # self.points = points
+        self.points = points
         self.sector = Polygon(np.array(points).astype('int'))
         self.angle = angle
         if self.angle > 90:
@@ -36,7 +38,7 @@ class CircleAixs:
     def __init__(self, bigcircle, secondcircles):
         self.center_thre = 15
         self.radius = bigcircle[1]
-        self.centx, self.centy, post_circles = self.infer_center(bigcircle, secondcircles)
+        self.centx, self.centy, post_circles = self.infer_center_new(bigcircle, secondcircles)
         self.axis_angle = self.infer_axis_angle(post_circles)
         
     def infer_center(self, bigcircle, secondcircles):
@@ -57,6 +59,24 @@ class CircleAixs:
         else:
             center_circle = center_circles[0]
         centx, centy = center_circle[0]
+        return centx, centy, post_circles
+    
+    def infer_center_new(self, bigcircle, secondcircles):
+        post_circles = []
+        dis_list = []
+        for circle in secondcircles:
+            x1, y1 = bigcircle[0]
+            x2, y2 = circle[0]
+            dis = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+            dis_list.append(dis)
+        min_ind = np.argmin(dis_list)
+        # get center_circle
+        center_circle = secondcircles[min_ind]
+        centx, centy = center_circle[0]
+        # get post_circles
+        for i, circles in enumerate(secondcircles):
+            if i != min_ind:
+                post_circles.append(circles)
         return centx, centy, post_circles
     
     def modify_det_box(self, det_box_json):
@@ -198,6 +218,8 @@ class AxisDetect:
     def detect_circle_houghcircles(self, image, gray, param1, param2, minRadius, maxRadius):
         circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, 20, param1=param1, param2=param2, 
                                 minRadius=minRadius, maxRadius=maxRadius)
+        if circles is None:
+            return []
         circles = np.uint16(np.around(circles))
         
         if self.debug:
@@ -210,7 +232,7 @@ class AxisDetect:
         post_cnts = []
         for i in circles[0, :]:
             post_cnts.append(((i[0], i[1]), i[2], 5))
-        return image
+        return post_cnts
     
     def detect_circle_morphology(self, image, gray, thre_a=5, thre_area1=1000, thre_area2=10000):
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
@@ -224,6 +246,8 @@ class AxisDetect:
             peri = cv2.arcLength(c, True)
             approx = cv2.approxPolyDP(c, 0.04 * peri, True)
             area = cv2.contourArea(c)
+            print(area)
+            print(len(approx))
             # print(f"approx: {len(approx)}, area: {area}")
             if len(approx) >= thre_a and area > thre_area1 and area <= thre_area2:
                 ((x, y), r) = cv2.minEnclosingCircle(c)
@@ -244,7 +268,7 @@ class AxisDetect:
         first_image = cv2.medianBlur(first_image, 11)
         gray = cv2.cvtColor(first_image, cv2.COLOR_BGR2GRAY)
         gray = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-        bigcircles = self.detect_circle_morphology(tgt_image, gray, 3, 10000, 50000)
+        bigcircles = self.detect_circle_morphology(tgt_image, gray, 3, 10000, 70000)
         if len(bigcircles) >= 1:
             bigcircle = sorted(bigcircles, key=lambda x: -x[1])[0]
         else:
@@ -264,7 +288,7 @@ class AxisDetect:
         gray = cv2.cvtColor(mask_image, cv2.COLOR_BGR2GRAY)
         gray = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
         gray = mask * gray
-        secondcircles = self.detect_circle_morphology(first_image, gray, 6, 600, 1400)
+        secondcircles = self.detect_circle_morphology(first_image, gray, 6, 600, 2500)
         if len(secondcircles) > 4:
             secondcircles = sorted(secondcircles, key=lambda x: -x[2])[:4]
         return bigcircle, secondcircles
@@ -288,6 +312,8 @@ class AxisDetect:
         for center_point in center_point_big:
             center_point_big_post.append(((center_point[0], center_point[1]), center_point[2], 5))
 
+        if len(center_point_big_post) == 0:
+            return None, center_points_post
         return center_point_big_post[0], center_points_post
 
     def find_white_circles(self, image, minDist=700, acc_thresh=50):
@@ -370,30 +396,78 @@ class AxisDetect:
     def infer_axis(self, bigcircle, secondcircles):
         return CircleAixs(bigcircle, secondcircles)
     
-    def infer(self, image):
+    def infer(self, imgfile):
+        # # preprocess
+        # height, width, _ = image.shape
+        # # use circle detect by nie
+        # tgt_width = 3072
+        # tgt_height = int(tgt_width / width * height)
+        # tgt_image = cv2.resize(image, (tgt_width, tgt_height)) # usually, we donot need to resize because 3072 is the original size
+        # # detect circle
+        # bigcircle, secondcircles = self.infer_circle_nie(tgt_image)
+        
+        # if len(bigcircle) == 0 or len(secondcircles) == 0:
+        #     print("warning: the nie method failed, try method two")
+        #     tgt_width = 512
+        #     tgt_height = int(tgt_width / width * height)
+        #     tgt_image = cv2.resize(image, (tgt_width, tgt_height))
+        #     # detect circle
+        #     bigcircle, secondcircles = self.infer_circle(tgt_image)
+        #     if bigcircle is None:
+        #         return None, "warning: 未检测到关键轴，请转动适当角度"
+        bigcircle, secondcircles = circle_detect_api(imgfile)
+        if bigcircle is None or secondcircles is None:
+            return None, "warning: 未检测到关键轴，请转动适当角度"
+            
+        circleaxis = self.infer_axis(bigcircle, secondcircles)
+        if len(circleaxis.axis_angle) == 0:
+            return None, "warning: 未检测到关键轴，请转动适当角度"
+        # circleaxis.set_scale(width / tgt_width)
+        circleaxis.set_scale(1)
+        return circleaxis, "关键轴检测成功~~~"
+    
+    def infer_debug(self, image):
         # preprocess
         height, width, _ = image.shape
-        # use circle detect by nie
+        # # use circle detect by nie
         tgt_width = 3072
         tgt_height = int(tgt_width / width * height)
         tgt_image = cv2.resize(image, (tgt_width, tgt_height)) # usually, we donot need to resize because 3072 is the original size
         # detect circle
         bigcircle, secondcircles = self.infer_circle_nie(tgt_image)
-        
-        if len(bigcircle) == 0 or len(secondcircles) == 0:
+
+        if bigcircle is None or len(secondcircles) == 0:
             print("warning: the nie method failed, try method two")
             tgt_width = 512
             tgt_height = int(tgt_width / width * height)
             tgt_image = cv2.resize(image, (tgt_width, tgt_height))
             # detect circle
             bigcircle, secondcircles = self.infer_circle(tgt_image)
-            if bigcircle is None:
-                return None, "warning: 未检测到关键轴，请转动适当角度"
             
-        circleaxis = self.infer_axis(bigcircle, secondcircles)
-        if len(circleaxis.axis_angle) == 0:
-            return None, "warning: 未检测到关键轴，请转动适当角度"
-        circleaxis.set_scale(width / tgt_width)
-        return circleaxis, "关键轴检测成功~~~"
+        cv2.circle(tgt_image, (int(bigcircle[0][0]), int(bigcircle[0][1])), int(bigcircle[1]), (0, 255, 0), 5)
+        cv2.circle(tgt_image, (int(bigcircle[0][0]), int(bigcircle[0][1])), 2, (0, 0, 255), 6)
+        for i in secondcircles:
+            cv2.circle(tgt_image, (int(i[0][0]), int(i[0][1])), int(i[1]), (0, 255, 0), 5)
+            cv2.circle(tgt_image, (int(i[0][0]), int(i[0][1])), 2, (0, 0, 255), 6)
         
-        
+        return tgt_image
+    
+if __name__ == '__main__':
+    import os
+    from PIL import Image
+    axisDetect = AxisDetect()
+    imroot = "D:/work/project/庄林/图像/空识别图像/2023_05_29"
+    # imroot = "D:/work/project/庄林/2023_06_12/2023_06_12"
+    # imroot = "D:/work/project/庄林/2023_06_organize_data/2023_06_12"
+    imlist = os.listdir(imroot)
+    for im in imlist[:2]:
+        # im = cv2.imread(os.path.join(imroot, im))
+        im = np.array(Image.open(os.path.join(imroot, im)).convert('RGB'))
+        tgt_image = axisDetect.infer_debug(im)
+        height, width, _ = tgt_image.shape
+        tgt_width = 512
+        tgt_height = int(tgt_width / width * height)
+        tgt_image = cv2.resize(tgt_image, (tgt_width, tgt_height))
+        cv2.imshow('image', tgt_image)
+        cv2.waitKey(0)
+    cv2.destroyAllWindows()
