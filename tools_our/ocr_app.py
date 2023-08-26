@@ -17,7 +17,9 @@ from snap7 import util
 import struct
 
 from app_debug.camera_utils.camera import Camera
-from ocr_app_func import open_serial_func, open_camera_func, open_plc_func, camera_info_button_func, turn_light_serial_func, get_image_func, send_server_func, write_plc_func, read_plc_func, auto_recog_func
+from ocr_app_func import (open_serial_func, open_camera_func, open_plc_func, camera_info_button_func, 
+                          turn_light_serial_func, get_image_func, send_server_func, write_plc_func, 
+                          read_plc_func, auto_recog_func, ocr_detect_func, axis_detect_func)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--port', type=int, default=6086, help="only useful when running gradio applications")
@@ -80,6 +82,34 @@ def open_camera_func(state, user_camera, camera_root, user_serial, serial_openli
     cv2.imwrite(save_file, image)
     return state, state, image
 
+def recog_func(state, image, op_select_button, camera_root, ocr_text, axis_text, axis_err_text):
+    if camera_root == '':
+        camera_root = 'pic_results'
+    t = time.localtime()
+    save_root = osp.join(camera_root, 'cache_file', f'{t.tm_year}-{t.tm_mon}-{t.tm_mday}')
+    if not osp.exists(save_root):
+        os.makedirs(save_root)
+    save_file = osp.join(save_root, f'{t.tm_year}-{t.tm_mon}-{t.tm_mday}-{t.tm_hour}-{t.tm_min}-{t.tm_sec}.png')
+    cv2.imwrite(save_file, image)
+    # 自动识别
+    if op_select_button == "OCR识别":
+        res = ocr_detect_func(image, save_file, save_root)
+    else:
+        res = axis_detect_func(image, save_file, save_root)
+    if res.success:
+        if op_select_button == "OCR识别":
+            state += [(None, f"识别结果为: {res['ocr_text']}")]
+        else:
+            state += [(None, f"识别结果为: {res['axis_text']}")]
+    else:
+        failed_info = state['state']
+        state += [(None, f"识别失败，未得到想要结果\ninfo: {failed_info}")]
+    # 返回值
+    if op_select_button == "OCR识别":
+        return state, state, res['ocr_text'], axis_text, axis_err_text
+    else:
+        return state, state, ocr_text, res['axis_text'], res['axis_err_text']
+
 def write_op_func(state, user_plc, op_select_button, ocr_text, ocr_block_text, axis_text, axis_err_text,
                   plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_write_content,
                   plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype,
@@ -127,7 +157,7 @@ def create_ui():
         
         with gr.Row():
             with gr.Column(scale=3.0):
-                camera_img = gr.Image(interactive=False).style(height=500)
+                camera_img = gr.Image(interactive=True).style(height=500)
             with gr.Column(scale=1.0):
                 chatbot = gr.Chatbot(label="chat with message info").style(height=500)
 
@@ -256,6 +286,7 @@ def create_ui():
                     open_light_serial = gr.Button(value="开灯", interactive=True)
                     close_light_serial = gr.Button(value="关灯", interactive=True)
                     open_camera = gr.Button(value="采图", interactive=True)
+                    recog = gr.Button(value="识别", interactive=True)
                     write_op = gr.Button(value="写入数据", interactive=True)
                 
         config_button.change(config_button_func,
@@ -297,6 +328,9 @@ def create_ui():
                           inputs=[state, user_camera, camera_root, user_serial, serial_openlight_cmd, serial_clostlight_cmd],
                           outputs=[state, chatbot, camera_img],
                           cancels=[auto_env])
+        recog.click(recog_func,
+                    inputs=[state, camera_img, op_select_button, camera_root, ocr_text, axis_text, axis_err_text],
+                    outputs=[state, chatbot, ocr_text, axis_text, axis_err_text])
         write_op.click(write_op_func,
                        inputs=[state, user_plc, op_select_button, ocr_text, ocr_block_text, axis_text, axis_err_text,
                                plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_write_content,
