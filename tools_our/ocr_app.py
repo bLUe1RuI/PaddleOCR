@@ -31,6 +31,25 @@ args = parser.parse_args()
 def is_platform_win():
     return sys.platform == "win32"
 
+def read_confg():
+    pass
+
+def ocr_api_key_func(ocr_api_key):
+    if ocr_api_key == 'zhuanglin':
+        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True), None, gr.update(value='管理员')
+    elif ocr_api_key == 'local':
+        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), None, gr.update(value='用户')
+    else:
+        return gr.update(visible=True), gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), "密码不对，请联系管理员", None
+
+def enable_button_func(ocr_api_key):
+    if ocr_api_key == 'zhuanglin':
+        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True), None, gr.update(value='管理员')
+    elif ocr_api_key == 'local':
+        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), None, gr.update(value='用户')
+    else:
+        return gr.update(visible=True), gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), "密码不对，请联系管理员", None
+
 def config_button_func(config_button):
     if config_button == "收起配置":
         return gr.update(visible=False)
@@ -155,13 +174,24 @@ def create_ui():
         gr.Markdown(title)
         gr.Markdown(description)
         
-        with gr.Row():
+        with gr.Row(visibile=True) as _open_key_conf:
+            ocr_api_key = gr.Textbox(
+                    placeholder="Input OCR API key",
+                    show_label=False,
+                    label="OCR API Key",
+                    lines=1,
+                    type="password")
+            enable_button = gr.Button(value="OPEN OCR", interactive=True, variant='primary')
+        with gr.Row(visible=False) as _open_key_state:
+            wiki_output = gr.Textbox(lines=5, label="错误提示", max_lines=5)
+        
+        with gr.Row(visible=False) as _use_state1:
             with gr.Column(scale=3.0):
                 camera_img = gr.Image(interactive=True).style(height=500)
             with gr.Column(scale=1.0):
                 chatbot = gr.Chatbot(label="chat with message info").style(height=500)
 
-        with gr.Tabs(elem_id='conf tabs'):
+        with gr.Tabs(elem_id='conf tabs', visiblie=False) as _root_state1:
             with gr.TabItem('基础配置'):
                 with gr.Row():
                     config_button = gr.Radio(
@@ -260,12 +290,29 @@ def create_ui():
                         # with gr.Row():
                         #     server_block = gr.Textbox(label='工号', value="1")
                         #     server_content = gr.Textbox(label='写入的数据内容', value="")
+        with gr.Tabs(elem_id='conf tabs', visiblie=False) as _use_state2:
+            with gr.TabItem('连接配置'):
+                with gr.Row():
+                    user_state = gr.Radio(choices=['管理员', '用户'],
+                                        value='用户',
+                                        label='用户状态', interactive=False)
+                    serial_state = gr.Radio(choices=['在线', '离线'],
+                                        value='离线',
+                                        label='串口状态', interactive=False)
+                    camera_state = gr.Radio(choices=['在线', '离线'],
+                                        value='离线',
+                                        label='相机状态', interactive=False)
+                    plc_state = gr.Radio(choices=['在线', '离线'],
+                                        value='离线',
+                                        label='PLC状态', interactive=False)
+                    
                 with gr.Row():
                     init_button = gr.Button(value="初始化连接", interactive=True)
+                    fresh_button = gr.Button(value="刷新连接状态", interactive=True)
                     camera_state_button = gr.Button(value="相机状态", interactive=True)
                     clear_state_button = gr.Button(value="清空infos", interactive=True)
                     
-        with gr.Tabs(elem_id='op tabs'):
+        with gr.Tabs(elem_id='op tabs', visible=False) as _use_state3:
             with gr.TabItem('基础操作'):
                 with gr.Row():
                     op_select_button = gr.Radio(
@@ -288,6 +335,14 @@ def create_ui():
                     open_camera = gr.Button(value="采图", interactive=True)
                     recog = gr.Button(value="识别", interactive=True)
                     write_op = gr.Button(value="写入数据", interactive=True)
+                    
+        # 用户登录状态
+        ocr_api_key.submit(ocr_api_key_func,
+                           inputs=[ocr_api_key],
+                           outputs=[_open_key_conf, _open_key_state, _use_state1, _root_state1, _use_state2, _use_state3, wiki_output, user_state])
+        enable_button.click(enable_button_func,
+                            inputs=[ocr_api_key],
+                            outputs=[_open_key_conf, _open_key_state, _use_state1, _root_state1, _use_state2, _use_state3, wiki_output, user_state])
                 
         config_button.change(config_button_func,
                                 inputs=[config_button],
