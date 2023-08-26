@@ -158,7 +158,27 @@ def auto_recog_button_func(state, user_serial, user_camera, user_plc, op_select_
         else:
             return state, state, ocr_text, res['axis_text'], res['axis_err_text']
     return state, state, ocr_text, axis_text, axis_err_text
+
+def fresh_button_func(user_serial, user_camera, user_plc):
+    if user_serial is not None and user_serial.isOpen():
+        ser_state = '在线'
+    else:
+        ser_state = '离线'
         
+    if user_camera is None or user_camera.cam is None:
+        cam_state = '离线'
+    else:
+        connect_value, connect_logs = user_camera.decide_divice_on_line()
+        if connect_value:
+            cam_state = '在线'
+        else:
+            cam_state = '离线'
+            
+    if user_plc is not None and user_plc.get_connected():
+        plc_state = '在线'
+    else:
+        plc_state = '离线'
+    return gr.update(value=ser_state), gr.update(value=cam_state), gr.update(value=plc_state)
 
 def create_ui():
     title = """<p><h1 align="center">OCR-Workshop-Alpha</h1></p>
@@ -356,6 +376,9 @@ def create_ui():
                                   serial_xonxoff, serial_rtscts, serial_dsrdtr, serial_read_timeout, serial_write_timeout,
                                   camera_index, camera_stdcall, camera_active_way, plc_port, plc_rack, plc_slot],
                           outputs=[state, chatbot, user_serial, user_camera, user_plc])
+        fresh_button.click(fresh_button_func,
+                           inputs=[user_serial, user_camera, user_plc],
+                           outputs=[serial_state, camera_state, plc_state])
         camera_state_button.click(camera_state_button_func,
                                   inputs=[state, user_camera],
                                   outputs=[state, chatbot])
