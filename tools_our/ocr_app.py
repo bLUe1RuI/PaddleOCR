@@ -63,8 +63,13 @@ def clear_state_button_func(state):
     state = []
     return state, state
 
-def open_camera_func(state, user_camera, camera_root):
+def open_camera_func(state, user_camera, camera_root, user_serial, serial_openlight_cmd, serial_clostlight_cmd):
+    # open light
+    state, _ = turn_light_serial_func(state, user_serial, serial_openlight_cmd)
+    # catch image
     state, _, image = get_image_func(state, user_camera)
+    # close light
+    state, _ = turn_light_serial_func(state, user_serial, serial_clostlight_cmd)
     if camera_root == '':
         camera_root = 'pic_results'
     t = time.localtime()
@@ -139,13 +144,13 @@ def create_ui():
                     # with gr.Column(scale=1.0):
                         with gr.Row():
                             serial_port = gr.Textbox(label='串口port名称', value="COM3")
-                            serial_baudrate = gr.Dropdown(choices=[50, 75, 110, 134, 150, 200, 300, 
-                                                                600, 1200, 1800, 2400, 4800, 9600, 
-                                                                19200, 38400, 57600, 115200, 230400, 
-                                                                460800, 500000, 576000, 921600, 
-                                                                1000000, 1152000, 1500000, 2000000, 
-                                                                2500000, 3000000, 3500000, 4000000],
-                                                    value=9600,
+                            serial_baudrate = gr.Dropdown(choices=['50', '75', '110', '134', '150', '200', '300', 
+                                                                '600', '1200', '1800', '2400', '4800', '9600', 
+                                                                '19200', '38400', '57600', '115200', '230400', 
+                                                                '460800', '500000', '576000', '921600', 
+                                                                '1000000', '1152000', '1500000', '2000000', 
+                                                                '2500000', '3000000', '3500000', '4000000'],
+                                                    value='9600',
                                                     label='串口波特率', interactive=True)
                             serial_bytesize = gr.Radio(choices=['FIVEBITS', 'SIXBITS', 'SEVENBITS', 'EIGHTBITS'],
                                                     value='EIGHTBITS',
@@ -289,7 +294,7 @@ def create_ui():
                                  outputs=[state, chatbot],
                                  cancels=[auto_env])
         open_camera.click(open_camera_func,
-                          inputs=[state, user_camera, camera_root],
+                          inputs=[state, user_camera, camera_root, user_serial, serial_openlight_cmd, serial_clostlight_cmd],
                           outputs=[state, chatbot, camera_img],
                           cancels=[auto_env])
         write_op.click(write_op_func,

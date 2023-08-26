@@ -356,13 +356,13 @@ def write_plc_func(state, user_plc, plc_write_blocknum, plc_write_blocknum_start
 def send_server_func(state, server_ip, server_block, server_content):
 
     data={}
-    data['id'] = int(server_block)
-    data['data'] = server_content
+    data["id"] = int(server_block)
+    data["data"] = server_content
     try:
-        data = json.dumps(data)
-        resp = requests.post(server_ip, data=data)
+        # data = json.dumps(data)
+        resp = requests.post(server_ip, json=data)
 
-        jsonResult = json.loads(resp)
+        jsonResult = resp.text #json.loads(resp.text)
         state += [(None, f"数据发送成功\n发送数据为: {data}\n返回值为: {jsonResult}")]
     except Exception as error:
         state += [(None, "数据发送失败")]
