@@ -32,23 +32,143 @@ def is_platform_win():
     return sys.platform == "win32"
 
 def read_confg():
-    pass
+    docs = json.load(open('config/config.json'))
+    return docs
+
+def save_conf_button_func(state, serial_port, serial_baudrate, serial_bytesize, serial_parity, serial_stopbits, serial_xonxoff, serial_rtscts, serial_dsrdtr, 
+                          serial_openlight_cmd, serial_clostlight_cmd, camera_index, camera_stdcall, camera_active_way, plc_port, plc_rack, plc_slot,
+                          plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype, plc_write_blocknum, plc_write_blocknum_start_pos,
+                          plc_write_dtype, plc_write_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content):
+    docs = json.load(open('config/config.json'))
+    if True:
+        if docs['serial_port'] != serial_port:
+            docs['serial_port'] = serial_port
+            
+        if docs['serial_baudrate'] != serial_baudrate:
+            docs['serial_baudrate'] = serial_baudrate
+            
+        if docs['serial_bytesize'] != serial_bytesize:
+            docs['serial_bytesize'] = serial_bytesize
+            
+        if docs['serial_parity'] != serial_parity:
+            docs['serial_parity'] = serial_parity
+            
+        if docs['serial_stopbits'] != serial_stopbits:
+            docs['serial_stopbits'] = serial_stopbits
+            
+        if docs['serial_xonxoff'] != serial_xonxoff:
+            docs['serial_xonxoff'] = serial_xonxoff
+            
+        if docs['serial_rtscts'] != serial_rtscts:
+            docs['serial_rtscts'] = serial_rtscts
+            
+        if docs['serial_dsrdtr'] != serial_dsrdtr:
+            docs['serial_dsrdtr'] = serial_dsrdtr
+
+        if docs['serial_openlight_cmd'] != serial_openlight_cmd:
+            docs['serial_openlight_cmd'] = serial_openlight_cmd
+            
+        if docs['serial_clostlight_cmd'] != serial_clostlight_cmd:
+            docs['serial_clostlight_cmd'] = serial_clostlight_cmd
+            
+        if docs['camera_index'] != camera_index:
+            docs['camera_index'] = camera_index
+            
+        if docs['camera_stdcall'] != camera_stdcall:
+            docs['camera_stdcall'] = camera_stdcall
+            
+        if docs['camera_active_way'] != camera_active_way:
+            docs['camera_active_way'] = camera_active_way
+            
+        if docs['plc_port'] != plc_port:
+            docs['plc_port'] = plc_port
+            
+        if docs['plc_rack'] != plc_rack:
+            docs['plc_rack'] = plc_rack
+            
+        if docs['plc_slot'] != plc_slot:
+            docs['plc_slot'] = plc_slot
+
+        if docs['plc_read_blocknum'] != plc_read_blocknum:
+            docs['plc_read_blocknum'] = plc_read_blocknum
+            
+        if docs['plc_read_blocknum_start_pos'] != plc_read_blocknum_start_pos:
+            docs['plc_read_blocknum_start_pos'] = plc_read_blocknum_start_pos
+            
+        if docs['plc_read_length'] != plc_read_length:
+            docs['plc_read_length'] = plc_read_length
+            
+        if docs['plc_read_dtype'] != plc_read_dtype:
+            docs['plc_read_dtype'] = plc_read_dtype
+            
+        if docs['plc_write_blocknum'] != plc_write_blocknum:
+            docs['plc_write_blocknum'] = plc_write_blocknum
+            
+        if docs['plc_write_blocknum_start_pos'] != plc_write_blocknum_start_pos:
+            docs['plc_write_blocknum_start_pos'] = plc_write_blocknum_start_pos
+            
+        if docs['plc_write_dtype'] != plc_write_dtype:
+            docs['plc_write_dtype'] = plc_write_dtype
+            
+        if docs['plc_write_content'] != plc_write_content:
+            docs['plc_write_content'] = plc_write_content
+
+        if docs['plc_state_write_blocknum'] != plc_state_write_blocknum:
+            docs['plc_state_write_blocknum'] = plc_state_write_blocknum
+            
+        if docs['plc_state_write_blocknum_start_pos'] != plc_state_write_blocknum_start_pos:
+            docs['plc_state_write_blocknum_start_pos'] = plc_state_write_blocknum_start_pos
+            
+        if docs['plc_state_write_dtype'] != plc_state_write_dtype:
+            docs['plc_state_write_dtype'] = plc_state_write_dtype
+            
+        if docs['plc_state_write_content'] != plc_state_write_content:
+            docs['plc_state_write_content'] = plc_state_write_content
+
+    state += [(None, "配置保存成功")]
+    return state, state
 
 def ocr_api_key_func(ocr_api_key):
+    docs = read_confg()
     if ocr_api_key == 'zhuanglin':
-        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True), None, gr.update(value='管理员')
+        return (gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True), None, gr.update(value='管理员'),
+                gr.update(docs['serial_port']), gr.update(docs['serial_baudrate']), gr.update(docs['serial_bytesize']), gr.update(docs['serial_parity']), gr.update(docs['serial_stopbits']), gr.update(docs['serial_xonxoff']), gr.update(docs['serial_rtscts']),
+                gr.update(docs['serial_dsrdtr']), gr.update(docs['serial_openlight_cmd']), gr.update(docs['serial_clostlight_cmd']), gr.update(docs['camera_index']), gr.update(docs['camera_stdcall']), gr.update(docs['camera_active_way']), gr.update(docs['plc_port']),
+                gr.update(docs['plc_rack']), gr.update(docs['plc_slot']), gr.update(docs['plc_read_blocknum']), gr.update(docs['plc_read_blocknum_start_pos']), gr.update(docs['plc_read_length']), gr.update(docs['plc_read_dtype']), gr.update(docs['plc_write_blocknum']),
+                gr.update(docs['plc_write_blocknum_start_pos']), gr.update(docs['plc_write_dtype']), gr.update(docs['plc_write_content']), gr.update(docs['plc_state_write_blocknum']), gr.update(docs['plc_state_write_blocknum_start_pos']), gr.update(docs['plc_state_write_dtype']), gr.update(docs['plc_state_write_content']))
     elif ocr_api_key == 'local':
-        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), None, gr.update(value='用户')
+        return (gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), None, gr.update(value='用户'),
+                gr.update(docs['serial_port']), gr.update(docs['serial_baudrate']), gr.update(docs['serial_bytesize']), gr.update(docs['serial_parity']), gr.update(docs['serial_stopbits']), gr.update(docs['serial_xonxoff']), gr.update(docs['serial_rtscts']),
+                gr.update(docs['serial_dsrdtr']), gr.update(docs['serial_openlight_cmd']), gr.update(docs['serial_clostlight_cmd']), gr.update(docs['camera_index']), gr.update(docs['camera_stdcall']), gr.update(docs['camera_active_way']), gr.update(docs['plc_port']),
+                gr.update(docs['plc_rack']), gr.update(docs['plc_slot']), gr.update(docs['plc_read_blocknum']), gr.update(docs['plc_read_blocknum_start_pos']), gr.update(docs['plc_read_length']), gr.update(docs['plc_read_dtype']), gr.update(docs['plc_write_blocknum']),
+                gr.update(docs['plc_write_blocknum_start_pos']), gr.update(docs['plc_write_dtype']), gr.update(docs['plc_write_content']), gr.update(docs['plc_state_write_blocknum']), gr.update(docs['plc_state_write_blocknum_start_pos']), gr.update(docs['plc_state_write_dtype']), gr.update(docs['plc_state_write_content']))
     else:
-        return gr.update(visible=True), gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), "密码不对，请联系管理员", None
+        return (gr.update(visible=True), gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), "密码不对，请联系管理员", None,
+                None, None, None, None, None, None, None,
+                None, None, None, None, None, None, None,
+                None, None, None, None, None, None, None,
+                None, None, None, None, None, None, None,)
 
 def enable_button_func(ocr_api_key):
+    docs = read_confg()
     if ocr_api_key == 'zhuanglin':
-        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True), None, gr.update(value='管理员')
+        return (gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True), None, gr.update(value='管理员'),
+                gr.update(docs['serial_port']), gr.update(docs['serial_baudrate']), gr.update(docs['serial_bytesize']), gr.update(docs['serial_parity']), gr.update(docs['serial_stopbits']), gr.update(docs['serial_xonxoff']), gr.update(docs['serial_rtscts']),
+                gr.update(docs['serial_dsrdtr']), gr.update(docs['serial_openlight_cmd']), gr.update(docs['serial_clostlight_cmd']), gr.update(docs['camera_index']), gr.update(docs['camera_stdcall']), gr.update(docs['camera_active_way']), gr.update(docs['plc_port']),
+                gr.update(docs['plc_rack']), gr.update(docs['plc_slot']), gr.update(docs['plc_read_blocknum']), gr.update(docs['plc_read_blocknum_start_pos']), gr.update(docs['plc_read_length']), gr.update(docs['plc_read_dtype']), gr.update(docs['plc_write_blocknum']),
+                gr.update(docs['plc_write_blocknum_start_pos']), gr.update(docs['plc_write_dtype']), gr.update(docs['plc_write_content']), gr.update(docs['plc_state_write_blocknum']), gr.update(docs['plc_state_write_blocknum_start_pos']), gr.update(docs['plc_state_write_dtype']), gr.update(docs['plc_state_write_content']))
     elif ocr_api_key == 'local':
-        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), None, gr.update(value='用户')
+        return (gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), None, gr.update(value='用户'),
+                gr.update(docs['serial_port']), gr.update(docs['serial_baudrate']), gr.update(docs['serial_bytesize']), gr.update(docs['serial_parity']), gr.update(docs['serial_stopbits']), gr.update(docs['serial_xonxoff']), gr.update(docs['serial_rtscts']),
+                gr.update(docs['serial_dsrdtr']), gr.update(docs['serial_openlight_cmd']), gr.update(docs['serial_clostlight_cmd']), gr.update(docs['camera_index']), gr.update(docs['camera_stdcall']), gr.update(docs['camera_active_way']), gr.update(docs['plc_port']),
+                gr.update(docs['plc_rack']), gr.update(docs['plc_slot']), gr.update(docs['plc_read_blocknum']), gr.update(docs['plc_read_blocknum_start_pos']), gr.update(docs['plc_read_length']), gr.update(docs['plc_read_dtype']), gr.update(docs['plc_write_blocknum']),
+                gr.update(docs['plc_write_blocknum_start_pos']), gr.update(docs['plc_write_dtype']), gr.update(docs['plc_write_content']), gr.update(docs['plc_state_write_blocknum']), gr.update(docs['plc_state_write_blocknum_start_pos']), gr.update(docs['plc_state_write_dtype']), gr.update(docs['plc_state_write_content']))
     else:
-        return gr.update(visible=True), gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), "密码不对，请联系管理员", None
+        return (gr.update(visible=True), gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), "密码不对，请联系管理员", None,
+                None, None, None, None, None, None, None,
+                None, None, None, None, None, None, None,
+                None, None, None, None, None, None, None,
+                None, None, None, None, None, None, None,)
 
 def config_button_func(config_button):
     if config_button == "收起配置":
@@ -310,6 +430,8 @@ def create_ui():
                         # with gr.Row():
                         #     server_block = gr.Textbox(label='工号', value="1")
                         #     server_content = gr.Textbox(label='写入的数据内容', value="")
+                with gr.Row():
+                    save_conf_button = gr.Button(value="保存配置", interactive=True)
         with gr.Tabs(elem_id='conf tabs', visiblie=False) as _use_state2:
             with gr.TabItem('连接配置'):
                 with gr.Row():
@@ -359,14 +481,29 @@ def create_ui():
         # 用户登录状态
         ocr_api_key.submit(ocr_api_key_func,
                            inputs=[ocr_api_key],
-                           outputs=[_open_key_conf, _open_key_state, _use_state1, _root_state1, _use_state2, _use_state3, wiki_output, user_state])
+                           outputs=[_open_key_conf, _open_key_state, _use_state1, _root_state1, _use_state2, _use_state3, wiki_output, user_state,
+                                    serial_port, serial_baudrate, serial_bytesize, serial_parity, serial_stopbits, serial_xonxoff, serial_rtscts, serial_dsrdtr, 
+                                    serial_openlight_cmd, serial_clostlight_cmd, camera_index, camera_stdcall, camera_active_way, plc_port, plc_rack, plc_slot,
+                                    plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype, plc_write_blocknum, plc_write_blocknum_start_pos,
+                                    plc_write_dtype, plc_write_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content])
         enable_button.click(enable_button_func,
                             inputs=[ocr_api_key],
-                            outputs=[_open_key_conf, _open_key_state, _use_state1, _root_state1, _use_state2, _use_state3, wiki_output, user_state])
+                            outputs=[_open_key_conf, _open_key_state, _use_state1, _root_state1, _use_state2, _use_state3, wiki_output, user_state,
+                                     serial_port, serial_baudrate, serial_bytesize, serial_parity, serial_stopbits, serial_xonxoff, serial_rtscts, serial_dsrdtr, 
+                                    serial_openlight_cmd, serial_clostlight_cmd, camera_index, camera_stdcall, camera_active_way, plc_port, plc_rack, plc_slot,
+                                    plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype, plc_write_blocknum, plc_write_blocknum_start_pos,
+                                    plc_write_dtype, plc_write_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content])
                 
         config_button.change(config_button_func,
                                 inputs=[config_button],
                                 outputs=[_conf])
+        
+        save_conf_button.click(save_conf_button_func,
+                               inputs=[state, serial_port, serial_baudrate, serial_bytesize, serial_parity, serial_stopbits, serial_xonxoff, serial_rtscts, serial_dsrdtr, 
+                                       serial_openlight_cmd, serial_clostlight_cmd, camera_index, camera_stdcall, camera_active_way, plc_port, plc_rack, plc_slot,
+                                       plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype, plc_write_blocknum, plc_write_blocknum_start_pos,
+                                       plc_write_dtype, plc_write_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content],
+                               outputs=[state, chatbot])
         
         op_select_button.change(op_select_button_func,
                                     inputs=[op_select_button],

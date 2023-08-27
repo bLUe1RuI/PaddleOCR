@@ -1,0 +1,32 @@
+{
+    "serial_port": "COM3",
+    "serial_baudrate": "9600",
+    "serial_bytesize": "EIGHTBITS",
+    "serial_parity": "PARITY_NONE",
+    "serial_stopbits": "STOPBITS_ONE",
+    "serial_xonxoff": false,
+    "serial_rtscts": false,
+    "serial_dsrdtr": false,
+    "serial_openlight_cmd": "$110ff14;$120ff17;$1306414",
+    "serial_clostlight_cmd": "$210ff17;$220ff14;$2306417",
+
+    "camera_index": "0",
+    "camera_stdcall": 1,
+    "camera_active_way": "getImagebuffer",
+
+    "plc_port": "192.168.1.10",
+    "plc_rack": 0,
+    "plc_slot": 0,
+    "plc_read_blocknum": "31",
+    "plc_read_blocknum_start_pos": "0",
+    "plc_read_length": "2",
+    "plc_read_dtype": "int",
+    "plc_write_blocknum": "1",
+    "plc_write_blocknum_start_pos": "0",
+    "plc_write_dtype": "int",
+    "plc_write_content": "10",
+    "plc_state_write_blocknum": "1",
+    "plc_state_write_blocknum_start_pos": "0",
+    "plc_state_write_dtype": "bool",
+    "plc_state_write_content": "True"
+}
