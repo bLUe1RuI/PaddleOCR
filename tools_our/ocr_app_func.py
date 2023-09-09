@@ -392,7 +392,7 @@ def auto_recog_func(state, user_serial, user_camera, user_plc, op_select_button,
         res = ocr_detect_func(image, save_file, save_root)
     else:
         res = axis_detect_func(image, save_file, save_root)
-    if res.success:
+    if res['success']:
         # 发送结果
         if op_select_button == "OCR识别":
             state, _ = send_server_func(state, server_ip, ocr_block_text, res['ocr_text'])
@@ -413,11 +413,13 @@ def auto_recog_func(state, user_serial, user_camera, user_plc, op_select_button,
 
 """auto recog func"""
 
-def ocr_detect_func(image, imgname, save_root):
+def ocr_detect_func(image, imgname, save_root, post_process=False):
     saveroot = osp.join(save_root, 'tmp-result')
+    if not os.path.exists(saveroot):
+        os.makedirs(saveroot)
     # 进行轴心的检测
     axisDetect = AxisDetect()
-    circleaxis, log_info = axisDetect.infer(image)
+    circleaxis, log_info = axisDetect.infer(imgname)
     if circleaxis is None or len(circleaxis.axis_angle) == 0:
         res = {
             'success': False,
@@ -450,7 +452,11 @@ def ocr_detect_func(image, imgname, save_root):
             shutil.copyfile(core_sector.first_det_file, osp.join(saveroot, 'first_det_result.png'))
             _transcriptions_str = ocr_rec_api(core_sector.ocr_boxes, saveroot)
             # 正则处理, 根据正则匹配，将不准确的部分重跑
-            succ, _transcriptions_str = post_process(core_sector.ocr_boxes)
+            if post_process:
+                succ, _transcriptions_str = post_process(core_sector.ocr_boxes)
+            else:
+                succ = True if 'RE' in _transcriptions_str else False
+                # succ = True
             if not succ:
                 continue
             ref_transcriptions_str = _transcriptions_str
@@ -471,9 +477,11 @@ def ocr_detect_func(image, imgname, save_root):
     
 def axis_detect_func(image, imgname, save_root):
     saveroot = osp.join(save_root, 'tmp-result')
+    if not os.path.exists(saveroot):
+        os.makedirs(saveroot)
     # 进行轴心的检测
     axisDetect = AxisDetect()
-    circleaxis, log_info = axisDetect.infer(image)
+    circleaxis, log_info = axisDetect.infer(imgname)
     if circleaxis is None or len(circleaxis.axis_angle) == 0:
         res = {
             'success': False,
@@ -499,6 +507,7 @@ def axis_detect_func(image, imgname, save_root):
             'state': 'success'
         }
         return res
+    select_sectors = sorted(select_sectors, key=lambda x: x.rotate_angle)
     select_sector = select_sectors[0]
     res = {
             'success': True,

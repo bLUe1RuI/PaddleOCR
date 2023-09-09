@@ -1,3 +1,3 @@
-call conda activate ocr_app
+call conda activate paddle_ocr
 python ocr_app.py
 pause

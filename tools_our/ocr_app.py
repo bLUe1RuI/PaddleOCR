@@ -241,7 +241,7 @@ def recog_func(state, image, op_select_button, camera_root, ocr_text, axis_text,
         res = ocr_detect_func(image, save_file, save_root)
     else:
         res = axis_detect_func(image, save_file, save_root)
-    if res.success:
+    if res['success']:
         if op_select_button == "OCR识别":
             state += [(None, f"识别结果为: {res['ocr_text']}")]
         else:
@@ -254,6 +254,18 @@ def recog_func(state, image, op_select_button, camera_root, ocr_text, axis_text,
         return state, state, res['ocr_text'], axis_text, axis_err_text, gr.update(value='手动')
     else:
         return state, state, ocr_text, res['axis_text'], res['axis_err_text'], gr.update(value='手动')
+    
+def badcase_func(state, image, camera_root):
+    if camera_root == '':
+        camera_root = 'pic_results'
+    t = time.localtime()
+    save_root = osp.join(camera_root, 'badcase', f'{t.tm_year}-{t.tm_mon}-{t.tm_mday}')
+    if not osp.exists(save_root):
+        os.makedirs(save_root)
+    save_file = osp.join(save_root, f'{t.tm_year}-{t.tm_mon}-{t.tm_mday}-{t.tm_hour}-{t.tm_min}-{t.tm_sec}.png')
+    cv2.imwrite(save_file, image)
+    state += [(None, "badcase save success")]
+    return state, state
 
 def write_op_func(state, user_plc, op_select_button, ocr_text, ocr_block_text, axis_text, axis_err_text,
                   plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_write_content,
@@ -488,7 +500,9 @@ def create_ui():
                         open_light_serial = gr.Button(value="开灯", interactive=True)
                         close_light_serial = gr.Button(value="关灯", interactive=True)
                         open_camera = gr.Button(value="采图", interactive=True)
-                        recog = gr.Button(value="识别", interactive=True)
+                        with gr.Row():
+                            recog = gr.Button(value="识别", interactive=True)
+                            badcase = gr.Button(value="BADCASE", interactive=True)
                         write_op = gr.Button(value="写入数据", interactive=True)
                     
         # 用户登录状态
@@ -559,6 +573,9 @@ def create_ui():
         recog.click(recog_func,
                     inputs=[state, camera_img, op_select_button, camera_root, ocr_text, axis_text, axis_err_text],
                     outputs=[state, chatbot, ocr_text, axis_text, axis_err_text, shell_state])
+        badcase.click(badcase_func,
+                      inputs=[state, camera_img, camera_root],
+                      outputs=[state, chatbot])
         write_op.click(write_op_func,
                        inputs=[state, user_plc, op_select_button, ocr_text, ocr_block_text, axis_text, axis_err_text,
                                plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_write_content,
@@ -573,6 +590,6 @@ def create_ui():
 
 if __name__ == '__main__':
     iface = create_ui()
-    iface.queue(concurrency_count=5, api_open=False, max_size=10)
+    iface.queue(concurrency_count=1, api_open=False, max_size=10)
     iface.launch(server_name="0.0.0.0" if not is_platform_win() else None, enable_queue=True, server_port=args.port,
-                 share=args.gradio_share)
+                 share=args.gradio_share, debug=True, inline=False)

@@ -214,7 +214,8 @@ def run_first_det_api(imgname, det_algorithm='DB++', use_onnx=False):
     # build model
     # model = build_model(config['Architecture'])
     # load_model(config, model)
-    predictor, input_tensor, output_tensors, _ = create_predictor('infer/det_r50_icdar15', 'det')
+    # predictor, input_tensor, output_tensors, _ = create_predictor('infer/det_r50_icdar15', 'det')
+    predictor, input_tensor, output_tensors, _ = create_predictor('infer/det_r50_icdar15_bs4x2_model0831', 'det')
     # build post process
     post_process_class = build_post_process(config['PostProcess'])
     # create data ops
@@ -310,7 +311,8 @@ def ocr_det_api(idx, saveroot, det_algorithm='DB', use_onnx=False):
     # build model
     # model = build_model(config['Architecture'])
     # load_model(config, model)
-    predictor, input_tensor, output_tensors, _ = create_predictor('infer/ch_PP-OCR_v3_det/Student', 'det')
+    # predictor, input_tensor, output_tensors, _ = create_predictor('infer/ch_PP-OCR_v3_det/Student', 'det')
+    predictor, input_tensor, output_tensors, _ = create_predictor('infer/ch_PP-OCR_v3_det_add_09data/Student', 'det')
     # build post process
     post_process_class = build_post_process(config['PostProcess'])
     # create data ops
@@ -430,7 +432,8 @@ def ocr_rec_api(ocr_boxes, saveroot, use_onnx=False):
             
     # model = build_model(config['Architecture'])
     # load_model(config, model)
-    predictor, input_tensor, output_tensors, _ = create_predictor('infer/v3_en_mobile', 'rec')
+    # predictor, input_tensor, output_tensors, _ = create_predictor('infer/v3_en_mobile', 'rec')
+    predictor, input_tensor, output_tensors, _ = create_predictor('infer/v3_en_mobile_add_09data', 'rec')
 
     # create data ops
     transforms = []
@@ -647,6 +650,7 @@ def ocr_rec_api(ocr_boxes, saveroot, use_onnx=False):
                 info = post_result[0][0] + "\t" + str(post_result[0][1])
 
         _ocr_box['transcription'] = post_result[0][0]
+        _ocr_box['ocr_score'] = post_result[0][1]
         _transcriptions.append(post_result[0][0])
     _transcriptions_str = '##'.join(_transcriptions)
         
@@ -706,20 +710,52 @@ def post_process(ocr_boxes):
     made_axis_line = None
     for _box in sort_boxes[:2]:
         ocr_text = _box['transcription']
-        if ocr_text[4] == ' ':
+        if 'W' in ocr_text:
+            continue
+        if ocr_text[3] == ' ':
             made_axis_line = ocr_text
     if made_axis_line is None:
         for _box in sort_boxes[:2]:
             ocr_text = _box['transcription']
             _made_id = ocr_text[:3]
             if modify_rec_result(_made_id, MADE_IDS, -1) is not None:
-                made_axis_line = ocr_text
+                made_axis_line = ocr_text[:3] + ' ' + ocr_text[3:]
                 break
     if made_axis_line is None:
-        return False, 'None match made_ids and aixs_ids'
-    _made_id, _axis_id = made_axis_line.split(' ')
-    _ref_made_id = modify_rec_result(_made_id, MADE_IDS)['ref_text']
-    _ref_axis_id = modify_rec_result(_axis_id, AIXS_IDS)['ref_text']
+        # get the middle text
+        tmp_sort_boxes = sorted(ocr_boxes, key=lambda x: (x['points'][1][1] + x['points'][2][1])/2)
+        _ref_made_id_item = None
+        for _box in tmp_sort_boxes[1:-2]:
+            ocr_text = _box['transcription'].replace(' ', '')
+            _item = modify_rec_result(ocr_text, MADE_IDS, 2)
+            if _item is None:
+                continue
+            if _ref_made_id_item:
+                if _item['_recall'] + _item['_precision'] < _ref_made_id_item['_recall'] + _ref_made_id_item['_precision']:
+                    continue
+            _ref_made_id_item = _item
+        if _ref_made_id_item is None:
+            return False, 'None match made_ids'
+        _ref_made_id = _ref_made_id_item['ref_text']
+        
+        _ref_aixs_id_item = None
+        for _box in tmp_sort_boxes[1:-2]:
+            ocr_text = _box['transcription'].replace(' ', '')
+            _item = modify_rec_result(ocr_text, AIXS_IDS, 4)
+            if _item is None:
+                continue
+            if _ref_aixs_id_item:
+                if _item['_recall'] + _item['_precision'] < _ref_aixs_id_item['_recall'] + _ref_aixs_id_item['_precision']:
+                    continue
+            _ref_aixs_id_item = _item
+        if _ref_aixs_id_item is None:
+            return False, 'None match aixs_ids'
+        _ref_axis_id = _ref_aixs_id_item['ref_text']
+    else:
+        _made_id, _axis_id = made_axis_line.split(' ')
+        _ref_made_id = modify_rec_result(_made_id, MADE_IDS)['ref_text']
+        _ref_axis_id = modify_rec_result(_axis_id, AIXS_IDS)['ref_text']
+    
     # get MADE_TIME
     _ref_made_time_item = None
     for _box in sort_boxes[2:]:
@@ -749,3 +785,14 @@ def post_process(ocr_boxes):
         return False, 'None match made_class'
     _ref_made_class = _ref_made_class_item['ref_text']
     return True, ','.join([_ref_made_id, _ref_axis_id, _ref_made_time, _ref_made_class])
+
+def single_test_ocr_det_rec():
+    saveroot = 'pic_results/cache_file/2023-9-2/tmp-result/'
+    idx = 1
+    import ipdb;ipdb.set_trace()
+    second_dt_boxes_json, first_det_filename = ocr_det_api(idx, saveroot, det_algorithm='DB', use_onnx=False)
+    # shutil.copyfile(first_det_filename, osp.join(saveroot, 'first_det_result.png'))
+    _transcriptions_str = ocr_rec_api(second_dt_boxes_json, saveroot)
+    
+if __name__ == '__main__':
+    single_test_ocr_det_rec()

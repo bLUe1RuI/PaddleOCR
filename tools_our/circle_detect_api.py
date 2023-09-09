@@ -890,9 +890,11 @@ if __name__ == '__main__':
     imroot = 'D:/work/project/庄林/图像/字符识别图像/2023_07_17'
     imlist = os.listdir(imroot)
     imlist = list(filter(lambda x: x[-4:] == '.bmp', imlist))
-    for im in imlist:
-        imroot = '../../../2023_06_organize_data/2023_06_12'
-        im = '09_05_56_607.png'
+    for im in imlist[:1]:
+        # imroot = '../../../2023_06_organize_data/2023_06_12'
+        # im = '09_05_56_607.png'
+        imroot = 'pic_results/cache_file/2023-9-1'
+        im = '2023-9-1-22-56-12.png'
         imgfile = os.path.join(imroot, im)
         results = main(imgfile)
         
