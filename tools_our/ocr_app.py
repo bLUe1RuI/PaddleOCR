@@ -38,7 +38,7 @@ def read_confg():
 def save_conf_button_func(state, serial_port, serial_baudrate, serial_bytesize, serial_parity, serial_stopbits, serial_xonxoff, serial_rtscts, serial_dsrdtr, 
                           serial_openlight_cmd, serial_clostlight_cmd, camera_index, camera_stdcall, camera_active_way, plc_port, plc_rack, plc_slot,
                           plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype, plc_write_blocknum, plc_write_blocknum_start_pos,
-                          plc_write_dtype, plc_write_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content,
+                          plc_write_dtype, plc_write_content, plc_write_false_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content, plc_state_write_false_content,
                           auto_light):
     docs = json.load(open('config/config.json'))
     if True:
@@ -113,6 +113,9 @@ def save_conf_button_func(state, serial_port, serial_baudrate, serial_bytesize, 
             
         if docs['plc_write_content'] != plc_write_content:
             docs['plc_write_content'] = plc_write_content
+            
+        if docs['plc_write_false_content'] != plc_write_false_content:
+            docs['plc_write_false_content'] = plc_write_false_content
 
         if docs['plc_state_write_blocknum'] != plc_state_write_blocknum:
             docs['plc_state_write_blocknum'] = plc_state_write_blocknum
@@ -125,6 +128,9 @@ def save_conf_button_func(state, serial_port, serial_baudrate, serial_bytesize, 
             
         if docs['plc_state_write_content'] != plc_state_write_content:
             docs['plc_state_write_content'] = plc_state_write_content
+        
+        if docs['plc_state_write_false_content'] != plc_state_write_false_content:
+            docs['plc_state_write_false_content'] = plc_state_write_false_content
             
         if docs['auto_light'] != auto_light:
             docs['auto_light'] = auto_light
@@ -141,21 +147,21 @@ def ocr_api_key_func(ocr_api_key):
                 gr.update(value=docs['serial_port']), gr.update(value=docs['serial_baudrate']), gr.update(value=docs['serial_bytesize']), gr.update(value=docs['serial_parity']), gr.update(value=docs['serial_stopbits']), gr.update(value=docs['serial_xonxoff']), gr.update(value=docs['serial_rtscts']),
                 gr.update(value=docs['serial_dsrdtr']), gr.update(value=docs['serial_openlight_cmd']), gr.update(value=docs['serial_clostlight_cmd']), gr.update(value=docs['camera_index']), gr.update(value=docs['camera_stdcall']), gr.update(value=docs['camera_active_way']), gr.update(value=docs['plc_port']),
                 gr.update(value=docs['plc_rack']), gr.update(value=docs['plc_slot']), gr.update(value=docs['plc_read_blocknum']), gr.update(value=docs['plc_read_blocknum_start_pos']), gr.update(value=docs['plc_read_length']), gr.update(value=docs['plc_read_dtype']), gr.update(value=docs['plc_write_blocknum']),
-                gr.update(value=docs['plc_write_blocknum_start_pos']), gr.update(value=docs['plc_write_dtype']), gr.update(value=docs['plc_write_content']), gr.update(value=docs['plc_state_write_blocknum']), gr.update(value=docs['plc_state_write_blocknum_start_pos']), gr.update(value=docs['plc_state_write_dtype']), gr.update(value=docs['plc_state_write_content']),
+                gr.update(value=docs['plc_write_blocknum_start_pos']), gr.update(value=docs['plc_write_dtype']), gr.update(value=docs['plc_write_content']), gr.update(value=docs['plc_write_false_content']), gr.update(value=docs['plc_state_write_blocknum']), gr.update(value=docs['plc_state_write_blocknum_start_pos']), gr.update(value=docs['plc_state_write_dtype']), gr.update(value=docs['plc_state_write_content']), gr.update(value=docs['plc_state_write_false_content']),
                 gr.update(value=docs['auto_light']))
     elif ocr_api_key == 'local':
         return (gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), None, gr.update(value='用户'),
                 gr.update(value=docs['serial_port']), gr.update(value=docs['serial_baudrate']), gr.update(value=docs['serial_bytesize']), gr.update(value=docs['serial_parity']), gr.update(value=docs['serial_stopbits']), gr.update(value=docs['serial_xonxoff']), gr.update(value=docs['serial_rtscts']),
                 gr.update(value=docs['serial_dsrdtr']), gr.update(value=docs['serial_openlight_cmd']), gr.update(value=docs['serial_clostlight_cmd']), gr.update(value=docs['camera_index']), gr.update(value=docs['camera_stdcall']), gr.update(value=docs['camera_active_way']), gr.update(value=docs['plc_port']),
                 gr.update(value=docs['plc_rack']), gr.update(value=docs['plc_slot']), gr.update(value=docs['plc_read_blocknum']), gr.update(value=docs['plc_read_blocknum_start_pos']), gr.update(value=docs['plc_read_length']), gr.update(value=docs['plc_read_dtype']), gr.update(value=docs['plc_write_blocknum']),
-                gr.update(value=docs['plc_write_blocknum_start_pos']), gr.update(value=docs['plc_write_dtype']), gr.update(value=docs['plc_write_content']), gr.update(value=docs['plc_state_write_blocknum']), gr.update(value=docs['plc_state_write_blocknum_start_pos']), gr.update(value=docs['plc_state_write_dtype']), gr.update(value=docs['plc_state_write_content']),
+                gr.update(value=docs['plc_write_blocknum_start_pos']), gr.update(value=docs['plc_write_dtype']), gr.update(value=docs['plc_write_content']), gr.update(value=docs['plc_write_false_content']), gr.update(value=docs['plc_state_write_blocknum']), gr.update(value=docs['plc_state_write_blocknum_start_pos']), gr.update(value=docs['plc_state_write_dtype']), gr.update(value=docs['plc_state_write_content']), gr.update(value=docs['plc_state_write_false_content']),
                 gr.update(value=docs['auto_light']))
     else:
         return (gr.update(visible=True), gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), "密码不对，请联系管理员", None,
                 None, None, None, None, None, None, None,
                 None, None, None, None, None, None, None,
                 None, None, None, None, None, None, None,
-                None, None, None, None, None, None, None,
+                None, None, None, None, None, None, None, None, None,
                 None)
 
 def enable_button_func(ocr_api_key):
@@ -165,19 +171,22 @@ def enable_button_func(ocr_api_key):
                 gr.update(value=docs['serial_port']), gr.update(value=docs['serial_baudrate']), gr.update(value=docs['serial_bytesize']), gr.update(value=docs['serial_parity']), gr.update(value=docs['serial_stopbits']), gr.update(value=docs['serial_xonxoff']), gr.update(value=docs['serial_rtscts']),
                 gr.update(value=docs['serial_dsrdtr']), gr.update(value=docs['serial_openlight_cmd']), gr.update(value=docs['serial_clostlight_cmd']), gr.update(value=docs['camera_index']), gr.update(value=docs['camera_stdcall']), gr.update(value=docs['camera_active_way']), gr.update(value=docs['plc_port']),
                 gr.update(value=docs['plc_rack']), gr.update(value=docs['plc_slot']), gr.update(value=docs['plc_read_blocknum']), gr.update(value=docs['plc_read_blocknum_start_pos']), gr.update(value=docs['plc_read_length']), gr.update(value=docs['plc_read_dtype']), gr.update(value=docs['plc_write_blocknum']),
-                gr.update(value=docs['plc_write_blocknum_start_pos']), gr.update(value=docs['plc_write_dtype']), gr.update(value=docs['plc_write_content']), gr.update(value=docs['plc_state_write_blocknum']), gr.update(value=docs['plc_state_write_blocknum_start_pos']), gr.update(value=docs['plc_state_write_dtype']), gr.update(value=docs['plc_state_write_content']))
+                gr.update(value=docs['plc_write_blocknum_start_pos']), gr.update(value=docs['plc_write_dtype']), gr.update(value=docs['plc_write_content']), gr.update(value=docs['plc_write_false_content']), gr.update(value=docs['plc_state_write_blocknum']), gr.update(value=docs['plc_state_write_blocknum_start_pos']), gr.update(value=docs['plc_state_write_dtype']), gr.update(value=docs['plc_state_write_content']), gr.update(value=docs['plc_state_write_false_content']),
+                gr.update(value=docs['auto_light']))
     elif ocr_api_key == 'local':
         return (gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), None, gr.update(value='用户'),
                 gr.update(value=docs['serial_port']), gr.update(value=docs['serial_baudrate']), gr.update(value=docs['serial_bytesize']), gr.update(value=docs['serial_parity']), gr.update(value=docs['serial_stopbits']), gr.update(value=docs['serial_xonxoff']), gr.update(value=docs['serial_rtscts']),
                 gr.update(value=docs['serial_dsrdtr']), gr.update(value=docs['serial_openlight_cmd']), gr.update(value=docs['serial_clostlight_cmd']), gr.update(value=docs['camera_index']), gr.update(value=docs['camera_stdcall']), gr.update(value=docs['camera_active_way']), gr.update(value=docs['plc_port']),
                 gr.update(value=docs['plc_rack']), gr.update(value=docs['plc_slot']), gr.update(value=docs['plc_read_blocknum']), gr.update(value=docs['plc_read_blocknum_start_pos']), gr.update(value=docs['plc_read_length']), gr.update(value=docs['plc_read_dtype']), gr.update(value=docs['plc_write_blocknum']),
-                gr.update(value=docs['plc_write_blocknum_start_pos']), gr.update(value=docs['plc_write_dtype']), gr.update(value=docs['plc_write_content']), gr.update(value=docs['plc_state_write_blocknum']), gr.update(value=docs['plc_state_write_blocknum_start_pos']), gr.update(value=docs['plc_state_write_dtype']), gr.update(value=docs['plc_state_write_content']))
+                gr.update(value=docs['plc_write_blocknum_start_pos']), gr.update(value=docs['plc_write_dtype']), gr.update(value=docs['plc_write_content']), gr.update(value=docs['plc_write_false_content']), gr.update(value=docs['plc_state_write_blocknum']), gr.update(value=docs['plc_state_write_blocknum_start_pos']), gr.update(value=docs['plc_state_write_dtype']), gr.update(value=docs['plc_state_write_content']), gr.update(value=docs['plc_state_write_false_content']),
+                gr.update(value=docs['auto_light']))
     else:
         return (gr.update(visible=True), gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), "密码不对，请联系管理员", None,
                 None, None, None, None, None, None, None,
                 None, None, None, None, None, None, None,
                 None, None, None, None, None, None, None,
-                None, None, None, None, None, None, None,)
+                None, None, None, None, None, None, None, None, None,
+                None)
 
 def config_button_func(config_button):
     if config_button == "收起配置":
@@ -240,6 +249,9 @@ def open_camera_button_func(state, user_camera, camera_root, user_serial, serial
     return state, state, image, gr.update(value='手动')
 
 def recog_func(state, image, op_select_button, camera_root, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text):
+    if image is None:
+        state += [(None, "图像为空，请输入图像")]
+        return state, state, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, gr.update(value='手动')
     if camera_root == '':
         camera_root = 'pic_results'
     t = time.localtime()
@@ -250,9 +262,9 @@ def recog_func(state, image, op_select_button, camera_root, ocr_made_ids_text, o
     cv2.imwrite(save_file, image)
     # 自动识别
     if op_select_button == "OCR识别":
-        res = ocr_detect_func(image, save_file, save_root)
+        res, rotate_image = ocr_detect_func(image, save_file, save_root)
     else:
-        res = axis_detect_func(image, save_file, save_root)
+        res, rotate_image = axis_detect_func(image, save_file, save_root)
     if res['success']:
         if op_select_button == "OCR识别":
             state += [(None, f"识别结果为: {res['ocr_text']}")]
@@ -265,9 +277,9 @@ def recog_func(state, image, op_select_button, camera_root, ocr_made_ids_text, o
     if op_select_button == "OCR识别":
         if res['success']:
             ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text = res['ocr_text'].split(',')
-        return state, state, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, gr.update(value='手动')
+        return state, state, rotate_image, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, gr.update(value='手动')
     else:
-        return state, state, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, res['axis_text'], res['axis_err_text'], gr.update(value='手动')
+        return state, state, rotate_image, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, res['axis_text'], res['axis_err_text'], gr.update(value='手动')
     
 def badcase_func(state, image, camera_root):
     if camera_root == '':
@@ -296,22 +308,22 @@ def write_op_func(state, user_plc, op_select_button, ocr_made_ids_text, ocr_aixs
     return state, state, gr.update(value='手动')
 
 def auto_recog_button_func(state, user_serial, user_camera, user_plc, op_select_button, serial_openlight_cmd, serial_clostlight_cmd, camera_root,
-                plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype,
+                plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_write_content, plc_write_false_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content, plc_state_write_false_content,
                 server_ip, ocr_block_text, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype,
                 ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, auto_light):
     # 读取plc状态
     state, _, data = read_plc_func(state, user_plc, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype)
     if data:
         # 进行自动识别
-        state, _, res = auto_recog_func(state, user_serial, user_camera, user_plc, op_select_button, serial_openlight_cmd, serial_clostlight_cmd, camera_root,
-                    plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype,
+        state, _, res, image = auto_recog_func(state, user_serial, user_camera, user_plc, op_select_button, serial_openlight_cmd, serial_clostlight_cmd, camera_root,
+                    plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_write_content, plc_write_false_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content, plc_state_write_false_content,
                     server_ip, ocr_block_text, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype, auto_light)
         if op_select_button == "OCR识别":
             if res['success']:
                 ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text = res['ocr_text'].split(',')
-            return state, state, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, gr.update(value='自动')
+            return state, state, image, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, gr.update(value='自动')
         else:
-            return state, state, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, res['axis_text'], res['axis_err_text'], gr.update(value='自动')
+            return state, state, image, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, res['axis_text'], res['axis_err_text'], gr.update(value='自动')
     return state, state, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, gr.update(value='自动')
 
 def fresh_button_func(user_serial, user_camera, user_plc):
@@ -363,6 +375,8 @@ def create_ui():
         with gr.Row(visible=False) as _use_state1:
             with gr.Column(scale=3.0):
                 camera_img = gr.Image(interactive=True).style(height=500)
+            with gr.Column(scale=3.0):
+                camera_rotate_img = gr.Image(interactive=False).style(height=500)
             with gr.Column(scale=1.0):
                 chatbot = gr.Chatbot(label="chat with message info").style(height=500)
 
@@ -450,14 +464,16 @@ def create_ui():
                                 plc_write_dtype = gr.Radio(choices=['bool', 'int', 'real', 'string', 'wstring'],
                                                         value='int',
                                                         label='写入数据类型', interactive=True)
-                                plc_write_content = gr.Textbox(label='写入的数据内容', value="10")
+                                plc_write_content = gr.Textbox(label='成功的写入数据内容', value="10")
+                                plc_write_false_content = gr.Textbox(label='失败的写入数据内容', value="10")
                             with gr.Row():
                                 plc_state_write_blocknum = gr.Textbox(label='写入转轴状态的数据块号', value="1")
                                 plc_state_write_blocknum_start_pos = gr.Textbox(label='写入转轴状态的数据块的起始地址', value="0")
                                 plc_state_write_dtype = gr.Radio(choices=['bool', 'int', 'real', 'string', 'wstring'],
                                                         value='bool',
                                                         label='写入转轴状态的数据类型', interactive=True)
-                                plc_state_write_content = gr.Textbox(label='写入转轴状态的数据内容', value="True")
+                                plc_state_write_content = gr.Textbox(label='正确的写入转轴状态的内容', value="True")
+                                plc_state_write_false_content = gr.Textbox(label='错误的写入转轴状态的内容', value="True")
                             with gr.Row():
                                 plc_text = gr.Textbox(label='读取数据内容')
                                 plc_read_button = gr.Button(value="读取数据测试", interactive=True)
@@ -547,7 +563,7 @@ def create_ui():
                                     serial_port, serial_baudrate, serial_bytesize, serial_parity, serial_stopbits, serial_xonxoff, serial_rtscts, serial_dsrdtr, 
                                     serial_openlight_cmd, serial_clostlight_cmd, camera_index, camera_stdcall, camera_active_way, plc_port, plc_rack, plc_slot,
                                     plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype, plc_write_blocknum, plc_write_blocknum_start_pos,
-                                    plc_write_dtype, plc_write_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content,
+                                    plc_write_dtype, plc_write_content, plc_write_false_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content, plc_state_write_false_content,
                                     auto_light])
         enable_button.click(enable_button_func,
                             inputs=[ocr_api_key],
@@ -555,7 +571,7 @@ def create_ui():
                                      serial_port, serial_baudrate, serial_bytesize, serial_parity, serial_stopbits, serial_xonxoff, serial_rtscts, serial_dsrdtr, 
                                     serial_openlight_cmd, serial_clostlight_cmd, camera_index, camera_stdcall, camera_active_way, plc_port, plc_rack, plc_slot,
                                     plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype, plc_write_blocknum, plc_write_blocknum_start_pos,
-                                    plc_write_dtype, plc_write_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content,
+                                    plc_write_dtype, plc_write_content, plc_write_false_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content, plc_state_write_false_content,
                                     auto_light])
                 
         config_button.change(config_button_func,
@@ -566,7 +582,7 @@ def create_ui():
                                inputs=[state, serial_port, serial_baudrate, serial_bytesize, serial_parity, serial_stopbits, serial_xonxoff, serial_rtscts, serial_dsrdtr, 
                                        serial_openlight_cmd, serial_clostlight_cmd, camera_index, camera_stdcall, camera_active_way, plc_port, plc_rack, plc_slot,
                                        plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype, plc_write_blocknum, plc_write_blocknum_start_pos,
-                                       plc_write_dtype, plc_write_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content,
+                                       plc_write_dtype, plc_write_content, plc_write_false_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content, plc_state_write_false_content,
                                        auto_light],
                                outputs=[state, chatbot])
         
@@ -594,7 +610,7 @@ def create_ui():
                                                 plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype,
                                                 server_ip, ocr_block_text, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype,
                                                 ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, auto_light],
-                                        outputs=[state, chatbot, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, shell_state],
+                                        outputs=[state, chatbot, camera_img, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, shell_state],
                                         every=30)
         open_light_serial.click(turn_light_serial_func,
                                 inputs=[state, user_serial, serial_openlight_cmd],
@@ -610,7 +626,7 @@ def create_ui():
                           cancels=[auto_env])
         recog.click(recog_func,
                     inputs=[state, camera_img, op_select_button, camera_root, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text],
-                    outputs=[state, chatbot, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, shell_state])
+                    outputs=[state, chatbot, camera_rotate_img, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, shell_state])
         badcase.click(badcase_func,
                       inputs=[state, camera_img, camera_root],
                       outputs=[state, chatbot])

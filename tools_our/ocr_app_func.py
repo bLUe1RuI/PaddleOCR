@@ -373,7 +373,7 @@ def send_server_func(state, server_ip, server_block, server_content):
 """auto func"""
 
 def auto_recog_func(state, user_serial, user_camera, user_plc, op_select_button, serial_openlight_cmd, serial_clostlight_cmd, camera_root,
-                    plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype,
+                    plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_write_content, plc_write_false_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content, plc_state_write_false_content,
                     server_ip, ocr_block_text, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype, auto_light):
     assert auto_light in ['含开灯', '不含开灯']
     if auto_light == '含开灯':
@@ -394,18 +394,18 @@ def auto_recog_func(state, user_serial, user_camera, user_plc, op_select_button,
         state, _ = turn_light_serial_func(state, user_serial, serial_clostlight_cmd)
     # 自动识别
     if op_select_button == "OCR识别":
-        res = ocr_detect_func(image, save_file, save_root)
+        res, _ = ocr_detect_func(image, save_file, save_root)
     else:
-        res = axis_detect_func(image, save_file, save_root)
+        res, _ = axis_detect_func(image, save_file, save_root)
     if res['success']:
         # 发送结果
         if op_select_button == "OCR识别":
             state, _ = send_server_func(state, server_ip, ocr_block_text, res['ocr_text'])
             # 发送PLC状态
             if 'success' in state:
-                state_text = 1
+                state_text = plc_write_content
             else:
-                state_text = 2
+                state_text = plc_write_false_content
             state, _ = write_plc_func(state, user_plc, plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, state_text)
         else:
             # write plc axis
@@ -419,12 +419,13 @@ def auto_recog_func(state, user_serial, user_camera, user_plc, op_select_button,
         state += [(None, f"识别失败，未得到想要结果\ninfo: {failed_info}")]
         # TODO 检测是否需要发送字段，说明识别失败
         
-    return state, state, res
+    return state, state, res, image
 
 
 """auto recog func"""
 
 def ocr_detect_func(image, imgname, save_root, post_=True):
+    rotate_image = image # init
     saveroot = osp.join(save_root, 'tmp-result')
     if not os.path.exists(saveroot):
         os.makedirs(saveroot)
@@ -437,7 +438,7 @@ def ocr_detect_func(image, imgname, save_root, post_=True):
             'ocr_text': 0,
             'state': "failed: first step axis failed"
         }
-        return res
+        return res, image
     sectors = circleaxis.cal_sector()
     # infer first det
     det_box_json = run_first_det_api(imgname)
@@ -471,6 +472,7 @@ def ocr_detect_func(image, imgname, save_root, post_=True):
             if not succ:
                 continue
             ref_transcriptions_str = _transcriptions_str
+            rotate_image = draw_first_task(image, circleaxis, core_sector)
             break
     if ref_transcriptions_str is None:
         res = {
@@ -484,10 +486,11 @@ def ocr_detect_func(image, imgname, save_root, post_=True):
             'ocr_text': ref_transcriptions_str,
             'state': "success"
         }
-    return res
+    return res, rotate_image
     
     
 def axis_detect_func(image, imgname, save_root):
+    rotate_image = image # init
     saveroot = osp.join(save_root, 'tmp-result')
     if not os.path.exists(saveroot):
         os.makedirs(saveroot)
@@ -501,7 +504,7 @@ def axis_detect_func(image, imgname, save_root):
             'axis_err_text': True,
             'state': "failed: first step axis failed"
         }
-        return res
+        return res, rotate_image
     sectors = circleaxis.cal_sector()
     # infer first det
     det_box_json = run_first_det_api(imgname)
@@ -518,13 +521,63 @@ def axis_detect_func(image, imgname, save_root):
             'axis_err_text': False,
             'state': 'success'
         }
-        return res
+        return res, rotate_image
     select_sectors = sorted(select_sectors, key=lambda x: x.rotate_angle)
     select_sector = select_sectors[0]
+    rotate_image = draw_first_task(image, circleaxis, select_sector)
     res = {
             'success': True,
             'axis_text': select_sector.rotate_angle,
             'axis_err_text': True,
             'state': 'success'
         }
-    return res
+    return res, rotate_image
+
+
+def rotate_img_func(img, angle):
+    '''
+    img   --image
+    angle --rotation angle
+    return--rotated img
+    '''
+    h, w = img.shape[:2]
+    rotate_center = (w/2, h/2)
+    #获取旋转矩阵
+    # 参数1为旋转中心点;
+    # 参数2为旋转角度,正值-逆时针旋转;负值-顺时针旋转
+    # 参数3为各向同性的比例因子,1.0原图，2.0变成原来的2倍，0.5变成原来的0.5倍
+    M = cv2.getRotationMatrix2D(rotate_center, angle, 1.0)
+    #计算图像新边界
+    new_w = int(h * np.abs(M[0, 1]) + w * np.abs(M[0, 0]))
+    new_h = int(h * np.abs(M[0, 0]) + w * np.abs(M[0, 1]))
+    #调整旋转矩阵以考虑平移
+    M[0, 2] += (new_w - w) / 2
+    M[1, 2] += (new_h - h) / 2
+
+    rotated_img = cv2.warpAffine(img, M, (new_w, new_h))
+    return rotated_img
+
+def draw_first_task(image, circleaxis, select_sector):
+    image_draft = image.copy()
+    tgt_height, tgt_width, _ = image_draft.shape
+    
+    circle_mask = np.zeros([tgt_height, tgt_width])
+    cv2.circle(circle_mask, (int(circleaxis.centx), int(circleaxis.centy)), int(circleaxis.radius), 1, -1)
+    circle_mask = circle_mask.astype('uint8')
+    circle_mask_inv = np.where(circle_mask, 0, 1).astype('uint8')
+    
+    image_background = image_draft * circle_mask_inv[:, :, None]
+    image_foreground = image_draft * circle_mask[:, :, None]
+    
+    _max_radius_height = min(tgt_height - circleaxis.centy, circleaxis.centy)
+    _max_radius_width = min(tgt_width - circleaxis.centx, circleaxis.centx)
+    radius = min([circleaxis.radius, _max_radius_height, _max_radius_width]) - 1
+    rotate_image_foreground = image_foreground[circleaxis.centy - radius : circleaxis.centy + radius, circleaxis.centx - radius : circleaxis.centx + radius]
+    rotate_image_foreground = rotate_img_func(rotate_image_foreground, select_sector.rotate_angle)
+    h, w, _ = rotate_image_foreground.shape
+    rotate_image_foreground = rotate_image_foreground[int(h/2) - radius: int(h/2) + radius, int(w/2) - radius: int(w/2) + radius]
+    image_foreground[circleaxis.centy - radius : circleaxis.centy + radius, circleaxis.centx - radius : circleaxis.centx + radius] = rotate_image_foreground
+    
+    image_cat = image_foreground + image_background
+    return image_cat
+    # return np.hstack([image, image_cat])
