@@ -249,6 +249,9 @@ def open_camera_button_func(state, user_camera, camera_root, user_serial, serial
     return state, state, image, gr.update(value='手动')
 
 def recog_func(state, image, op_select_button, camera_root, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text):
+    # 做长度限制
+    if len(state) >= 50:
+        state = state[-50:]
     if image is None:
         state += [(None, "图像为空，请输入图像")]
         return state, state, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, gr.update(value='手动')
@@ -311,20 +314,37 @@ def auto_recog_button_func(state, user_serial, user_camera, user_plc, op_select_
                 plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_write_content, plc_write_false_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content, plc_state_write_false_content,
                 server_ip, ocr_block_text, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype,
                 ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, auto_light):
-    # 读取plc状态
-    state, _, data = read_plc_func(state, user_plc, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype)
+    debug = False
+    if debug:
+        # 做长度限制
+        if len(state) >= 50:
+            state = state[-50:]
+        data = [x.strip() for x in open('pic_results/tmp_state.txt')][0]
+        state += [(None, f"调试状态, 接收pic_results的状态: {data}")]
+        if data == 'True' or data == 'TRUE':
+            data = True
+            state += [(None, "识别进行中。。。")]
+        else:
+            data = False
+    else:
+        # 读取plc状态
+        state, _, data = read_plc_func(state, user_plc, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype)
     if data:
         # 进行自动识别
         state, _, res, image = auto_recog_func(state, user_serial, user_camera, user_plc, op_select_button, serial_openlight_cmd, serial_clostlight_cmd, camera_root,
                     plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_write_content, plc_write_false_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content, plc_state_write_false_content,
-                    server_ip, ocr_block_text, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype, auto_light)
+                    server_ip, ocr_block_text, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype, auto_light, debug)
         if op_select_button == "OCR识别":
             if res['success']:
                 ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text = res['ocr_text'].split(',')
             return state, state, image, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, gr.update(value='自动')
         else:
             return state, state, image, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, res['axis_text'], res['axis_err_text'], gr.update(value='自动')
-    return state, state, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, gr.update(value='自动')
+    return state, state, None, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, gr.update(value='自动')
+
+def close_recog_button_func(state):
+    state = [(None, "关闭自动识别服务")]
+    return state, state
 
 def fresh_button_func(user_serial, user_camera, user_plc):
     if user_serial is not None and user_serial.isOpen():
@@ -534,6 +554,7 @@ def create_ui():
                     with gr.Tab("自动识别"):
                         with gr.Row():
                             auto_recog_button = gr.Button(value="自动识别", interactive=True)
+                            close_recog_button = gr.Button(value="关闭自动识别", interactive=True)
                     with gr.Tab("手动识别"):
                         with gr.Row():
                             open_light_serial = gr.Button(value="开灯", interactive=True)
@@ -607,11 +628,15 @@ def create_ui():
         # should cancel auto process
         auto_env = auto_recog_button.click(auto_recog_button_func,
                                         inputs=[state, user_serial, user_camera, user_plc, op_select_button, serial_openlight_cmd, serial_clostlight_cmd, camera_root,
-                                                plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype,
+                                                plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_write_content, plc_write_false_content, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, plc_state_write_content, plc_state_write_false_content,
                                                 server_ip, ocr_block_text, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype,
                                                 ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, auto_light],
                                         outputs=[state, chatbot, camera_img, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, shell_state],
                                         every=30)
+        close_recog_button.click(close_recog_button_func,
+                                 inputs=[state],
+                                 outputs=[state, chatbot],
+                                 cancels=[auto_env])
         open_light_serial.click(turn_light_serial_func,
                                 inputs=[state, user_serial, serial_openlight_cmd],
                                 outputs=[state, chatbot, shell_state],
