@@ -239,7 +239,7 @@ def open_camera_button_func(state, user_camera, camera_root, user_serial, serial
     cv2.imwrite(save_file, image)
     return state, state, image, gr.update(value='手动')
 
-def recog_func(state, image, op_select_button, camera_root, ocr_text, axis_text, axis_err_text):
+def recog_func(state, image, op_select_button, camera_root, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text):
     if camera_root == '':
         camera_root = 'pic_results'
     t = time.localtime()
@@ -259,13 +259,15 @@ def recog_func(state, image, op_select_button, camera_root, ocr_text, axis_text,
         else:
             state += [(None, f"识别结果为: {res['axis_text']}")]
     else:
-        failed_info = state['state']
+        failed_info = res['state']
         state += [(None, f"识别失败，未得到想要结果\ninfo: {failed_info}")]
     # 返回值
     if op_select_button == "OCR识别":
-        return state, state, res['ocr_text'], axis_text, axis_err_text, gr.update(value='手动')
+        if res['success']:
+            ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text = res['ocr_text'].split(',')
+        return state, state, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, gr.update(value='手动')
     else:
-        return state, state, ocr_text, res['axis_text'], res['axis_err_text'], gr.update(value='手动')
+        return state, state, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, res['axis_text'], res['axis_err_text'], gr.update(value='手动')
     
 def badcase_func(state, image, camera_root):
     if camera_root == '':
@@ -279,11 +281,12 @@ def badcase_func(state, image, camera_root):
     state += [(None, "badcase save success")]
     return state, state
 
-def write_op_func(state, user_plc, op_select_button, ocr_text, ocr_block_text, axis_text, axis_err_text,
+def write_op_func(state, user_plc, op_select_button, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, ocr_block_text, axis_text, axis_err_text,
                   plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_write_content,
                   plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype,
                   plc_state_write_content, server_ip):
     if op_select_button == "OCR识别":
+        ocr_text = ','.join([ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text])
         state, _ = send_server_func(state, server_ip, ocr_block_text, ocr_text)
     else:
         # write plc axis
@@ -295,7 +298,7 @@ def write_op_func(state, user_plc, op_select_button, ocr_text, ocr_block_text, a
 def auto_recog_button_func(state, user_serial, user_camera, user_plc, op_select_button, serial_openlight_cmd, serial_clostlight_cmd, camera_root,
                 plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype,
                 server_ip, ocr_block_text, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype,
-                ocr_text, axis_text, axis_err_text, auto_light):
+                ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, auto_light):
     # 读取plc状态
     state, _, data = read_plc_func(state, user_plc, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype)
     if data:
@@ -304,10 +307,12 @@ def auto_recog_button_func(state, user_serial, user_camera, user_plc, op_select_
                     plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype,
                     server_ip, ocr_block_text, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype, auto_light)
         if op_select_button == "OCR识别":
-            return state, state, res['ocr_text'], axis_text, axis_err_text, gr.update(value='自动')
+            if res['success']:
+                ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text = res['ocr_text'].split(',')
+            return state, state, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, gr.update(value='自动')
         else:
-            return state, state, ocr_text, res['axis_text'], res['axis_err_text'], gr.update(value='自动')
-    return state, state, ocr_text, axis_text, axis_err_text, gr.update(value='自动')
+            return state, state, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, res['axis_text'], res['axis_err_text'], gr.update(value='自动')
+    return state, state, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, gr.update(value='自动')
 
 def fresh_button_func(user_serial, user_camera, user_plc):
     if user_serial is not None and user_serial.isOpen():
@@ -525,7 +530,10 @@ def create_ui():
                     with gr.Row():
                         with gr.Column(visible=True) as ocr_text_vis:
                             with gr.Row():
-                                ocr_text =  gr.Textbox(label='OCR识别结果', value="")
+                                ocr_made_ids_text =  gr.Textbox(label='厂代号', value="")
+                                ocr_aixs_ids_text =  gr.Textbox(label='轴号', value="")
+                                ocr_made_time_text =  gr.Textbox(label='制作日期', value="")
+                                ocr_made_class_text =  gr.Textbox(label='轴型', value="")
                                 ocr_block_text = gr.Textbox(label='工号', value="1")
                     with gr.Column(visible=False) as aixs_text_vis:
                         with gr.Row():
@@ -585,8 +593,8 @@ def create_ui():
                                         inputs=[state, user_serial, user_camera, user_plc, op_select_button, serial_openlight_cmd, serial_clostlight_cmd, camera_root,
                                                 plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype,
                                                 server_ip, ocr_block_text, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype,
-                                                ocr_text, axis_text, axis_err_text, auto_light],
-                                        outputs=[state, chatbot, ocr_text, axis_text, axis_err_text, shell_state],
+                                                ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, auto_light],
+                                        outputs=[state, chatbot, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, shell_state],
                                         every=30)
         open_light_serial.click(turn_light_serial_func,
                                 inputs=[state, user_serial, serial_openlight_cmd],
@@ -601,13 +609,13 @@ def create_ui():
                           outputs=[state, chatbot, camera_img, shell_state],
                           cancels=[auto_env])
         recog.click(recog_func,
-                    inputs=[state, camera_img, op_select_button, camera_root, ocr_text, axis_text, axis_err_text],
-                    outputs=[state, chatbot, ocr_text, axis_text, axis_err_text, shell_state])
+                    inputs=[state, camera_img, op_select_button, camera_root, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text],
+                    outputs=[state, chatbot, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, axis_text, axis_err_text, shell_state])
         badcase.click(badcase_func,
                       inputs=[state, camera_img, camera_root],
                       outputs=[state, chatbot])
         write_op.click(write_op_func,
-                       inputs=[state, user_plc, op_select_button, ocr_text, ocr_block_text, axis_text, axis_err_text,
+                       inputs=[state, user_plc, op_select_button, ocr_made_ids_text, ocr_aixs_ids_text, ocr_made_time_text, ocr_made_class_text, ocr_block_text, axis_text, axis_err_text,
                                plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_write_content,
                                plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype,
                                plc_state_write_content, server_ip],

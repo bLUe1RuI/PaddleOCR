@@ -661,10 +661,15 @@ def ocr_rec_api(ocr_boxes, saveroot, use_onnx=False):
     del output_tensors
     return _transcriptions_str
 
-MADE_IDS = ['183', '057', '063', '053', '114', '043', '059', '105', '184', 'XRY']
+MADE_IDS = [
+            '101', '103', '105', '106', '107', '112', '114', '121', '131', '132', '161', '181', '183',
+            '184', '191', '043', '047', '051', '053', '054', '055', '056', '057', '058', '059', '060',
+            '061', '062', '063', '202', '043', '053', '057', '059', '060', '063', '105', '114', '183',
+            '184', 'XRY'
+            ]
 AIXS_IDS = ['160077', '08396', '11282', '25991', '19132', '28480', '66542', '06312', '47873', '11879', '14110', '38647', '42396', '60738', '76338', '19980', '72496', '19596', '60162', '80895', '190668', '03975', '11133', '07826', '85861', '39768', '39923', '01810', '14471', '17449', '79436', '27412', '158360', '176843', '12014', '233794', '15579', '36743', '01936', '08400', '14263', '08507', '13245', '65920', '19764', '207564', '56702', '81315', '00699', '72899', '58018', '11437', '22540', '84694', '69360', '22166', '607173', '57175', '53030', '19013', '02108', '13523', '82086', '51041', '10726', '07784', '71097', '08884', '00080', '10288', '80506', '101080', '162316', '04736', '194526', '16317', '68192', '21953', '51421', '23255', '01797', '17002', '52869', '142013', '15279', '65620', '12912', '146277', '24254', '17284', '57879']
 MADE_TIME = ['1008', '0910', '1101', '0510', '0810', '0912', '0704', '0808', '1010', '1107', '1112', '1310', '0907', '1301', '1111', '1304', '1411', '1003', '1006', '0603', '1211', '0809', '0812', '1009', '1004', '1205', '1305', '0902', '1405', '1202', '1306', '0612', '1106', '1302', '0905', '1702', '1208', '1104', '0806', '1103', '1308', '0901', '1011', '0904', '1206', '1804', '1102', '1612', '1209', '1303', '1207', '1204', '0908']
-MADE_CLASS = ['RE2B']
+MADE_CLASS = ['RE2B', 'RE2A', 'RD2']
 
 def lcs(str1, str2):
     m = len(str1)
@@ -692,7 +697,7 @@ def modify_rec_result(text, ref_texts, limit_len=None):
             _recall = joint_length / len(ref_text)
             _precision = joint_length / len(text)
             if tmp_item:
-                if _recall + _precision < tmp_item['_recall'] + tmp_item['_precision']:
+                if _recall + _precision <= tmp_item['_recall'] + tmp_item['_precision']:
                     continue
             tmp_item = {
                 'ori_text': text,
@@ -714,6 +719,7 @@ def post_process(ocr_boxes):
             continue
         if ocr_text[3] == ' ':
             made_axis_line = ocr_text
+            break
     if made_axis_line is None:
         for _box in sort_boxes[:2]:
             ocr_text = _box['transcription']
@@ -721,9 +727,9 @@ def post_process(ocr_boxes):
             if modify_rec_result(_made_id, MADE_IDS, -1) is not None:
                 made_axis_line = ocr_text[:3] + ' ' + ocr_text[3:]
                 break
+    tmp_sort_boxes = sorted(ocr_boxes, key=lambda x: (x['points'][1][1] + x['points'][2][1])/2)
     if made_axis_line is None:
         # get the middle text
-        tmp_sort_boxes = sorted(ocr_boxes, key=lambda x: (x['points'][1][1] + x['points'][2][1])/2)
         _ref_made_id_item = None
         for _box in tmp_sort_boxes[1:-2]:
             ocr_text = _box['transcription'].replace(' ', '')
@@ -738,38 +744,52 @@ def post_process(ocr_boxes):
             return False, 'None match made_ids'
         _ref_made_id = _ref_made_id_item['ref_text']
         
-        _ref_aixs_id_item = None
-        for _box in tmp_sort_boxes[1:-2]:
-            ocr_text = _box['transcription'].replace(' ', '')
-            _item = modify_rec_result(ocr_text, AIXS_IDS, 4)
-            if _item is None:
-                continue
-            if _ref_aixs_id_item:
-                if _item['_recall'] + _item['_precision'] < _ref_aixs_id_item['_recall'] + _ref_aixs_id_item['_precision']:
-                    continue
-            _ref_aixs_id_item = _item
-        if _ref_aixs_id_item is None:
+        # _ref_aixs_id_item = None
+        # for _box in tmp_sort_boxes[1:-2]:
+        #     ocr_text = _box['transcription'].replace(' ', '')
+        #     _item = modify_rec_result(ocr_text, AIXS_IDS, 4)
+        #     if _item is None:
+        #         continue
+        #     if _ref_aixs_id_item:
+        #         if _item['_recall'] + _item['_precision'] < _ref_aixs_id_item['_recall'] + _ref_aixs_id_item['_precision']:
+        #             continue
+        #     _ref_aixs_id_item = _item
+        # if _ref_aixs_id_item is None:
+        #     return False, 'None match aixs_ids'
+        # _ref_axis_id = _ref_aixs_id_item['ref_text']
+        tmp_txts = [x['transcription'].replace(' ', '') for x in tmp_sort_boxes[1:-2]]
+        _ref_aixs_id_item = list(filter(lambda x: len(x) == 5 or len(x) == 6, tmp_txts))
+        if len(_ref_aixs_id_item) == 0:
             return False, 'None match aixs_ids'
-        _ref_axis_id = _ref_aixs_id_item['ref_text']
+        _ref_axis_id = _ref_aixs_id_item[0]   
     else:
-        _made_id, _axis_id = made_axis_line.split(' ')
-        _ref_made_id = modify_rec_result(_made_id, MADE_IDS)['ref_text']
-        _ref_axis_id = modify_rec_result(_axis_id, AIXS_IDS)['ref_text']
+        # _made_id, _axis_id = made_axis_line.split(' ')
+        # _ref_made_id = modify_rec_result(_made_id, MADE_IDS)['ref_text']
+        # _ref_axis_id = modify_rec_result(_axis_id, AIXS_IDS)['ref_text']
+        _ref_made_id = made_axis_line[:3].replace(' ', '')
+        _ref_axis_id = made_axis_line[4:].replace(' ', '')
     
     # get MADE_TIME
-    _ref_made_time_item = None
-    for _box in sort_boxes[2:]:
-        ocr_text = _box['transcription'].replace(' ', '')
-        _item = modify_rec_result(ocr_text, MADE_TIME, 3)
-        if _item is None:
-            continue
-        if _ref_made_time_item:
-            if _item['_recall'] + _item['_precision'] < _ref_made_time_item['_recall'] + _ref_made_time_item['_precision']:
-                continue
-        _ref_made_time_item = _item
-    if _ref_made_time_item is None:
-        return False, 'None match made_time'
-    _ref_made_time = _ref_made_time_item['ref_text']
+    # _ref_made_time_item = None
+    # for _box in sort_boxes[2:]:
+    #     ocr_text = _box['transcription'].replace(' ', '')
+    #     _item = modify_rec_result(ocr_text, MADE_TIME, 3)
+    #     if _item is None:
+    #         continue
+    #     if _ref_made_time_item:
+    #         if _item['_recall'] + _item['_precision'] < _ref_made_time_item['_recall'] + _ref_made_time_item['_precision']:
+    #             continue
+    #     _ref_made_time_item = _item
+    # if _ref_made_time_item is None:
+    #     return False, 'None match made_time'
+    # _ref_made_time = _ref_made_time_item['ref_text']
+    tmp_txts = [x['transcription'].replace(' ', '') for x in tmp_sort_boxes[2:-1]]
+    _ref_made_time_item = list(filter(lambda x: len(x)==4, tmp_txts))
+    if len(_ref_made_time_item) == 0:
+        _ref_made_time_item = list(filter(lambda x: len(x)==5, tmp_txts))
+        if len(_ref_made_time_item) == 0:
+            return False, 'None match made_time'
+    _ref_made_time = _ref_made_time_item[-1][:4]
     # get MADE_CLASS
     _ref_made_class_item = None
     for _box in sort_boxes[2:]:
@@ -778,7 +798,7 @@ def post_process(ocr_boxes):
         if _item is None:
             continue
         if _ref_made_class_item:
-            if _item['_recall'] + _item['_precision'] < _ref_made_class_item['_recall'] + _ref_made_class_item['_precision']:
+            if _item['_recall'] + _item['_precision'] <= _ref_made_class_item['_recall'] + _ref_made_class_item['_precision']:
                 continue
         _ref_made_class_item = _item
     if _ref_made_class_item is None:

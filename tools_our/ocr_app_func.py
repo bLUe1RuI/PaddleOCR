@@ -401,6 +401,7 @@ def auto_recog_func(state, user_serial, user_camera, user_plc, op_select_button,
         # 发送结果
         if op_select_button == "OCR识别":
             state, _ = send_server_func(state, server_ip, ocr_block_text, res['ocr_text'])
+            # 发送PLC状态
             if 'success' in state:
                 state_text = 1
             else:
@@ -423,7 +424,7 @@ def auto_recog_func(state, user_serial, user_camera, user_plc, op_select_button,
 
 """auto recog func"""
 
-def ocr_detect_func(image, imgname, save_root, post_process=False):
+def ocr_detect_func(image, imgname, save_root, post_=True):
     saveroot = osp.join(save_root, 'tmp-result')
     if not os.path.exists(saveroot):
         os.makedirs(saveroot)
@@ -462,7 +463,7 @@ def ocr_detect_func(image, imgname, save_root, post_process=False):
             shutil.copyfile(core_sector.first_det_file, osp.join(saveroot, 'first_det_result.png'))
             _transcriptions_str = ocr_rec_api(core_sector.ocr_boxes, saveroot)
             # 正则处理, 根据正则匹配，将不准确的部分重跑
-            if post_process:
+            if post_:
                 succ, _transcriptions_str = post_process(core_sector.ocr_boxes)
             else:
                 succ = True if 'RE' in _transcriptions_str else False
@@ -470,6 +471,7 @@ def ocr_detect_func(image, imgname, save_root, post_process=False):
             if not succ:
                 continue
             ref_transcriptions_str = _transcriptions_str
+            break
     if ref_transcriptions_str is None:
         res = {
             'success': False,
