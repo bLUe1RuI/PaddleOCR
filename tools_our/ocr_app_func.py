@@ -18,7 +18,9 @@ import struct
 import shutil
 
 from app_debug.camera_utils.camera import Camera
-from ocr_api_infermodel import run_first_det_api, post_process_first_det_api, ocr_det_api, ocr_rec_api, post_process
+from ocr_api import run_first_det_api, post_process_first_det_api, ocr_det_api, ocr_rec_api
+# from ocr_api_infermodel import run_first_det_api, post_process_first_det_api, ocr_det_api, ocr_rec_api
+from ocr_api_infermodel import post_process
 from util_class import AxisDetect
 
 def clear_state_button_func(state):

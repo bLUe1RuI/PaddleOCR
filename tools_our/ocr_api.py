@@ -39,6 +39,133 @@ def load_config(file_path):
     config = yaml.load(open(file_path, 'rb'), Loader=yaml.Loader)
     return config
 
+# init first det model
+def _init_first_det_model():
+    # _first_det_config = '../configs/det/det_r50_db++_icdar15.yml'
+    _first_det_config = 'infer/gpu/det_r50_icdar15_bs4x2_0831/config.yml'
+    first_det_config = load_config(_first_det_config)
+    first_det_global_config = first_det_config['Global']
+    # build model
+    first_det_model = build_model(first_det_config['Architecture'])
+    load_model(first_det_config, first_det_model)
+    # build post process
+    first_det_post_process_class = build_post_process(first_det_config['PostProcess'])
+    # create data ops
+    first_det_transforms = []
+    for op in first_det_config['Eval']['dataset']['transforms']:
+        op_name = list(op)[0]
+        if 'Label' in op_name:
+            continue
+        elif op_name == 'KeepKeys':
+            op[op_name]['keep_keys'] = ['image', 'shape']
+        first_det_transforms.append(op)
+        
+    first_det_ops = create_operators(first_det_transforms, first_det_global_config)
+    first_det_model.eval()
+    return first_det_ops, first_det_model, first_det_post_process_class
+
+def _init_second_det_model():
+    # _second_det_config = '../configs/det/ch_PP-OCRv3/ch_PP-OCRv3_det_cml.yml'
+    _second_det_config = 'infer/gpu/ch_PP-OCR_v3_det_add_09data/config.yml'
+    seconde_det_config = load_config(_second_det_config)
+    seconde_det_global_config = seconde_det_config['Global']
+    # build model
+    second_det_model = build_model(seconde_det_config['Architecture'])
+    load_model(seconde_det_config, second_det_model)
+    # build post process
+    second_det_post_process_class = build_post_process(seconde_det_config['PostProcess'])
+    # create data ops
+    second_det_transforms = []
+    for op in seconde_det_config['Eval']['dataset']['transforms']:
+        op_name = list(op)[0]
+        if 'Label' in op_name:
+            continue
+        elif op_name == 'KeepKeys':
+            op[op_name]['keep_keys'] = ['image', 'shape']
+        second_det_transforms.append(op)
+        
+    second_ops = create_operators(second_det_transforms, seconde_det_global_config)
+    second_det_model.eval()
+    return second_ops, second_det_model, second_det_post_process_class
+
+def _init_second_recog_model():
+    # _second_recog_config = '../configs/rec/PP-OCRv3/en_PP-OCRv3_rec.yml'
+    _second_recog_config = 'infer/gpu/v3_en_mobile_add_09data/config.yml'
+    second_recog_config = load_config(_second_recog_config)
+    second_recog_config['Global']['character_dict_path'] = osp.join('..', second_recog_config['Global']['character_dict_path'])
+    second_recog_global_config = second_recog_config['Global']
+    # build post process
+    second_recog_post_process_class = build_post_process(second_recog_config['PostProcess'],
+                                            second_recog_global_config)
+    if hasattr(second_recog_post_process_class, 'character'):
+        char_num = len(getattr(second_recog_post_process_class, 'character'))
+        if second_recog_config['Architecture']["algorithm"] in ["Distillation",
+                                                    ]:  # distillation model
+            for key in second_recog_config['Architecture']["Models"]:
+                if second_recog_config['Architecture']['Models'][key]['Head'][
+                        'name'] == 'MultiHead':  # for multi head
+                    out_channels_list = {}
+                    if second_recog_config['PostProcess'][
+                            'name'] == 'DistillationSARLabelDecode':
+                        char_num = char_num - 2
+                    out_channels_list['CTCLabelDecode'] = char_num
+                    out_channels_list['SARLabelDecode'] = char_num + 2
+                    second_recog_config['Architecture']['Models'][key]['Head'][
+                        'out_channels_list'] = out_channels_list
+                else:
+                    second_recog_config['Architecture']["Models"][key]["Head"][
+                        'out_channels'] = char_num
+        elif second_recog_config['Architecture']['Head'][
+                'name'] == 'MultiHead':  # for multi head loss
+            out_channels_list = {}
+            if second_recog_config['PostProcess']['name'] == 'SARLabelDecode':
+                char_num = char_num - 2
+            out_channels_list['CTCLabelDecode'] = char_num
+            out_channels_list['SARLabelDecode'] = char_num + 2
+            second_recog_config['Architecture']['Head'][
+                'out_channels_list'] = out_channels_list
+        else:  # base rec model
+            second_recog_config['Architecture']["Head"]['out_channels'] = char_num
+            
+    second_recog_model = build_model(second_recog_config['Architecture'])
+
+    load_model(second_recog_config, second_recog_model)
+
+    # create data ops
+    second_recog_transforms = []
+    for op in second_recog_config['Eval']['dataset']['transforms']:
+        op_name = list(op)[0]
+        if 'Label' in op_name:
+            continue
+        elif op_name in ['RecResizeImg']:
+            op[op_name]['infer_mode'] = True
+        elif op_name == 'KeepKeys':
+            if second_recog_config['Architecture']['algorithm'] == "SRN":
+                op[op_name]['keep_keys'] = [
+                    'image', 'encoder_word_pos', 'gsrm_word_pos',
+                    'gsrm_slf_attn_bias1', 'gsrm_slf_attn_bias2'
+                ]
+            elif second_recog_config['Architecture']['algorithm'] == "SAR":
+                op[op_name]['keep_keys'] = ['image', 'valid_ratio']
+            elif second_recog_config['Architecture']['algorithm'] == "RobustScanner":
+                op[op_name][
+                    'keep_keys'] = ['image', 'valid_ratio', 'word_positons']
+            else:
+                op[op_name]['keep_keys'] = ['image']
+        second_recog_transforms.append(op)
+    second_recog_global_config['infer_mode'] = True
+    second_recog_ops = create_operators(second_recog_transforms, second_recog_global_config)
+
+    second_recog_model.eval()
+    return second_recog_ops, second_recog_model, second_recog_post_process_class, second_recog_config
+
+# init first det model
+first_det_ops, first_det_model, first_det_post_process_class = _init_first_det_model()
+# init second det model
+second_ops, second_det_model, second_det_post_process_class = _init_second_det_model()
+# init second recog
+second_recog_ops, second_recog_model, second_recog_post_process_class, second_recog_config = _init_second_recog_model()
+
 def get_rotate_crop_image(img, points):
     points = np.array(points)
     assert len(points) == 4
@@ -64,28 +191,13 @@ def get_rotate_crop_image(img, points):
     return dst_img
 
 def run_first_det_api(imgname):
-    _config = '../configs/det/det_r50_db++_icdar15.yml'
-    config = load_config(_config)
-    global_config = config['Global']
-    # build model
-    model = build_model(config['Architecture'])
-    load_model(config, model)
-    # build post process
-    post_process_class = build_post_process(config['PostProcess'])
-    # create data ops
-    transforms = []
-    for op in config['Eval']['dataset']['transforms']:
-        op_name = list(op)[0]
-        if 'Label' in op_name:
-            continue
-        elif op_name == 'KeepKeys':
-            op[op_name]['keep_keys'] = ['image', 'shape']
-        transforms.append(op)
-        
-    ops = create_operators(transforms, global_config)
+    global first_det_ops
+    global first_det_post_process_class
+    global first_det_model
+    ops = first_det_ops
+    model = first_det_model
+    post_process_class = first_det_post_process_class
     
-    model.eval()
-
     with open(imgname, 'rb') as f:
         img = f.read()
         data = {'image': img}
@@ -108,8 +220,8 @@ def run_first_det_api(imgname):
     det_box_json['filename'] = imgname
     det_box_json['boxes'] = dt_boxes_json
 
-    del model
-    paddle.device.cuda.empty_cache()
+    # del model
+    # paddle.device.cuda.empty_cache()
     return det_box_json
 
 def post_process_first_det_api(idx, image, det_box, saveroot):
@@ -124,28 +236,13 @@ def post_process_first_det_api(idx, image, det_box, saveroot):
 
 def ocr_det_api(idx, saveroot):
     first_det_filename = osp.join(saveroot, f'first_det_result_{idx}.png')
-    # init
-    _config = '../configs/det/ch_PP-OCRv3/ch_PP-OCRv3_det_cml.yml'
-    config = load_config(_config)
-    global_config = config['Global']
-    # build model
-    model = build_model(config['Architecture'])
-    load_model(config, model)
-    # build post process
-    post_process_class = build_post_process(config['PostProcess'])
-    # create data ops
-    transforms = []
-    for op in config['Eval']['dataset']['transforms']:
-        op_name = list(op)[0]
-        if 'Label' in op_name:
-            continue
-        elif op_name == 'KeepKeys':
-            op[op_name]['keep_keys'] = ['image', 'shape']
-        transforms.append(op)
-        
-    ops = create_operators(transforms, global_config)
+    global second_ops
+    global second_det_model
+    global second_det_post_process_class
+    ops = second_ops
+    model = second_det_model
+    post_process_class = second_det_post_process_class
     
-    model.eval()
     det_box_json_list = []
 
     crop_im = first_det_filename
@@ -169,80 +266,21 @@ def ocr_det_api(idx, saveroot):
         tmp_json["points"] = np.array(box).tolist()
         dt_boxes_json.append(tmp_json)
             
-    del model
-    paddle.device.cuda.empty_cache()
+    # del model
+    # paddle.device.cuda.empty_cache()
     return dt_boxes_json, first_det_filename
 
 def ocr_rec_api(ocr_boxes, saveroot):
     first_det_filename = osp.join(saveroot, 'first_det_result.png')
-    # init
-    _config = '../configs/rec/PP-OCRv3/en_PP-OCRv3_rec.yml'
-    config = load_config(_config)
-    config['Global']['character_dict_path'] = osp.join('..', config['Global']['character_dict_path'])
-    global_config = config['Global']
-    # build post process
-    post_process_class = build_post_process(config['PostProcess'],
-                                            global_config)
-    if hasattr(post_process_class, 'character'):
-        char_num = len(getattr(post_process_class, 'character'))
-        if config['Architecture']["algorithm"] in ["Distillation",
-                                                   ]:  # distillation model
-            for key in config['Architecture']["Models"]:
-                if config['Architecture']['Models'][key]['Head'][
-                        'name'] == 'MultiHead':  # for multi head
-                    out_channels_list = {}
-                    if config['PostProcess'][
-                            'name'] == 'DistillationSARLabelDecode':
-                        char_num = char_num - 2
-                    out_channels_list['CTCLabelDecode'] = char_num
-                    out_channels_list['SARLabelDecode'] = char_num + 2
-                    config['Architecture']['Models'][key]['Head'][
-                        'out_channels_list'] = out_channels_list
-                else:
-                    config['Architecture']["Models"][key]["Head"][
-                        'out_channels'] = char_num
-        elif config['Architecture']['Head'][
-                'name'] == 'MultiHead':  # for multi head loss
-            out_channels_list = {}
-            if config['PostProcess']['name'] == 'SARLabelDecode':
-                char_num = char_num - 2
-            out_channels_list['CTCLabelDecode'] = char_num
-            out_channels_list['SARLabelDecode'] = char_num + 2
-            config['Architecture']['Head'][
-                'out_channels_list'] = out_channels_list
-        else:  # base rec model
-            config['Architecture']["Head"]['out_channels'] = char_num
-            
-    model = build_model(config['Architecture'])
-
-    load_model(config, model)
-
-    # create data ops
-    transforms = []
-    for op in config['Eval']['dataset']['transforms']:
-        op_name = list(op)[0]
-        if 'Label' in op_name:
-            continue
-        elif op_name in ['RecResizeImg']:
-            op[op_name]['infer_mode'] = True
-        elif op_name == 'KeepKeys':
-            if config['Architecture']['algorithm'] == "SRN":
-                op[op_name]['keep_keys'] = [
-                    'image', 'encoder_word_pos', 'gsrm_word_pos',
-                    'gsrm_slf_attn_bias1', 'gsrm_slf_attn_bias2'
-                ]
-            elif config['Architecture']['algorithm'] == "SAR":
-                op[op_name]['keep_keys'] = ['image', 'valid_ratio']
-            elif config['Architecture']['algorithm'] == "RobustScanner":
-                op[op_name][
-                    'keep_keys'] = ['image', 'valid_ratio', 'word_positons']
-            else:
-                op[op_name]['keep_keys'] = ['image']
-        transforms.append(op)
-    global_config['infer_mode'] = True
-    ops = create_operators(transforms, global_config)
-
-    model.eval()
+    global second_recog_ops
+    global second_recog_model
+    global second_recog_post_process_class
+    global second_recog_config
+    config = second_recog_config
+    ops = second_recog_ops
+    model = second_recog_model
+    post_process_class = second_recog_post_process_class
+   
     _transcriptions = []
     for idx, _ocr_box in enumerate(ocr_boxes):
         _first_im = first_det_filename
@@ -321,6 +359,6 @@ def ocr_rec_api(ocr_boxes, saveroot):
         _transcriptions.append(post_result[0][0])
     _transcriptions_str = '##'.join(_transcriptions)
         
-    del model
-    paddle.device.cuda.empty_cache()
+    # del model
+    # paddle.device.cuda.empty_cache()
     return _transcriptions_str

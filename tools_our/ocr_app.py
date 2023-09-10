@@ -226,8 +226,9 @@ def open_camera_button_func(state, user_camera, camera_root, user_serial, serial
         state, _ = turn_light_serial_func(state, user_serial, serial_openlight_cmd)
     # catch image
     state, _, image = get_image_func(state, user_camera)
-    # close light
-    state, _ = turn_light_serial_func(state, user_serial, serial_clostlight_cmd)
+    if auto_light == '含开灯':
+        # close light
+        state, _ = turn_light_serial_func(state, user_serial, serial_clostlight_cmd)
     if camera_root == '':
         camera_root = 'pic_results'
     t = time.localtime()
