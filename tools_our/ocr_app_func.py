@@ -343,7 +343,7 @@ def write_plc_func(state, user_plc, plc_write_blocknum, plc_write_blocknum_start
     else:
         raise ValueError(f"now not support data type{plc_write_dtype}")
     # 写入数据
-    user_plc.do_write(
+    user_plc.db_write(
         plc_write_param['plc_blocknum'],
         plc_write_param['byte_index'],
         data
@@ -372,9 +372,11 @@ def send_server_func(state, server_ip, server_block, server_content):
 
 def auto_recog_func(state, user_serial, user_camera, user_plc, op_select_button, serial_openlight_cmd, serial_clostlight_cmd, camera_root,
                     plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype,
-                    server_ip, ocr_block_text, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype):
-    # 开灯
-    state, _ = turn_light_serial_func(state, user_serial, serial_openlight_cmd)
+                    server_ip, ocr_block_text, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_length, plc_read_dtype, auto_light):
+    assert auto_light in ['含开灯', '不含开灯']
+    if auto_light == '含开灯':
+        # 开灯
+        state, _ = turn_light_serial_func(state, user_serial, serial_openlight_cmd)
     # 获取相片, 并保存
     state, _, image = get_image_func(state, user_camera)
     if camera_root == '':
@@ -385,8 +387,9 @@ def auto_recog_func(state, user_serial, user_camera, user_plc, op_select_button,
         os.makedirs(save_root)
     save_file = osp.join(save_root, f'{t.tm_year}-{t.tm_mon}-{t.tm_mday}-{t.tm_hour}-{t.tm_min}-{t.tm_sec}.png')
     cv2.imwrite(save_file, image)
-    # 关灯
-    state, _ = turn_light_serial_func(state, user_serial, serial_clostlight_cmd)
+    if auto_light == '含开灯':
+        # 关灯
+        state, _ = turn_light_serial_func(state, user_serial, serial_clostlight_cmd)
     # 自动识别
     if op_select_button == "OCR识别":
         res = ocr_detect_func(image, save_file, save_root)
@@ -396,13 +399,18 @@ def auto_recog_func(state, user_serial, user_camera, user_plc, op_select_button,
         # 发送结果
         if op_select_button == "OCR识别":
             state, _ = send_server_func(state, server_ip, ocr_block_text, res['ocr_text'])
+            if 'success' in state:
+                state_text = 1
+            else:
+                state_text = 2
+            state, _ = write_plc_func(state, user_plc, plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, state_text)
         else:
             # write plc axis
             state, _ = write_plc_func(state, user_plc, plc_write_blocknum, plc_write_blocknum_start_pos, plc_write_dtype, res['axis_text'])
             # write plc state
             state, _ = write_plc_func(state, user_plc, plc_state_write_blocknum, plc_state_write_blocknum_start_pos, plc_state_write_dtype, res['axis_err_text'])
         # 置位plc
-        write_plc_func(state, user_plc, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_dtype, 'False')
+        # write_plc_func(state, user_plc, plc_read_blocknum, plc_read_blocknum_start_pos, plc_read_dtype, 'False')
     else:
         failed_info = state['state']
         state += [(None, f"识别失败，未得到想要结果\ninfo: {failed_info}")]
